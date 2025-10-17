@@ -7,6 +7,9 @@ footer {
   width: 100%;
   z-index: 2;
   color: #ffffff;
+  position: relative;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 footer .footer > div {
@@ -17,6 +20,22 @@ footer .footer > div {
 
 footer .footer p {
   margin: 0;
+  margin-bottom: 12px;
+}
+
+footer .footer ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+footer .footer ul li {
+  display: inline-flex;
+  align-items: center;
 }
 
 footer .footer img {
