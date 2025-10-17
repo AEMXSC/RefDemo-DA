@@ -305,7 +305,6 @@ body {
 
 body.appear {
   display: block;
-  overflow-x: hidden;
 }
 body.gray-theme {
   filter: grayscale(100%);
@@ -548,13 +547,23 @@ main picture:hover::before {
 
 
 /* Parallax effect - Start */
-main {
+html {
+  overflow-x: hidden;
+}
+
+body {
   height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-perspective: 1px;
   perspective: 1px;
 }
+
+main {
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+}
+
 main .hero-container {
   -webkit-transform: translateZ(-1px) scale(2);
   transform: translateZ(-1px) scale(2);
@@ -568,10 +577,12 @@ main .cards-container {
 .adobe-ue-edit header, .adobe-ue-preview header {
   position: initial;
 }
-.adobe-ue-edit main, .adobe-ue-preview main {
+.adobe-ue-edit body, .adobe-ue-preview body {
   height: initial;
   perspective: initial;
   overflow: initial;
+}
+.adobe-ue-edit main, .adobe-ue-preview main {
   min-height: 100px;
 }
 .adobe-ue-edit main .hero-container, .adobe-ue-preview main .hero-container {
