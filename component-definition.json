@@ -128,19 +128,19 @@
           "filter": "carousel",
           "plugins": {
             "da": {
-              "rows": 1,
-              "columns": 2
+              "rows": 0,
+              "columns": 0
             }
           }
         },
         {
-          "title": "Carousel Slide",
-          "id": "carousel-item",
-          "model": "carousel-item",
+          "title": "Carousel Card",
+          "id": "carousel-card",
+          "model": "carousel-card",
           "plugins": {
             "da": {
               "rows": 1,
-              "columns": 2,
+              "columns": 4,
               "fields": [
                 {
                   "name": "backgroundImage",
@@ -153,6 +153,14 @@
                 {
                   "name": "text",
                   "selector": "div:nth-child(2)"
+                },
+                {
+                  "name": "style",
+                  "selector": "div:nth-child(3)>p"
+                },
+                {
+                  "name": "cta",
+                  "selector": "div:nth-child(4)>p"
                 }
               ]
             }
