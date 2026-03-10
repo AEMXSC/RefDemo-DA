@@ -184,6 +184,7 @@ function buildAutoBlocks(main) {
           try {
             const { pathname } = new URL(fragment.href);
             const frag = await loadFragment(pathname);
+            console.log('frag', frag);
             fragment.parentElement.replaceWith(...frag.children);
           } catch (error) {
             // eslint-disable-next-line no-console

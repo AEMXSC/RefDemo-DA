@@ -38,6 +38,20 @@ export async function getSiteName() {
   }
 }
 
+export async function getHostname() {
+  try {
+    const listOfAllPlaceholdersData = await fetchPlaceholders();
+    const hostname = listOfAllPlaceholdersData?.hostname;
+    if (hostname) {
+      return hostname;
+    }
+    return '';
+  } catch (error) {
+    console.warn('Error fetching placeholders for hostname:', error);
+    return '';
+  }
+}
+
 /**
  * Get Inherited Page Properties
  * Considers pathnames like /en/path/to/content and
