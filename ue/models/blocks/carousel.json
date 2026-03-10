@@ -7,23 +7,25 @@
       "filter": "carousel",
       "plugins": {
         "da": {
-          "rows": 1,
-          "columns": 2
+          "rows": 0,
+          "columns": 0
         }
       }
     },
     {
-      "title": "Carousel Slide",
-      "id": "carousel-item",
-      "model": "carousel-item",
+      "title": "Carousel Card",
+      "id": "carousel-card",
+      "model": "carousel-card",
       "plugins": {
         "da": {
           "rows": 1,
-          "columns": 2,
+          "columns": 4,
           "fields": [
             { "name": "backgroundImage", "selector": "div:nth-child(1)>picture>img[src]" },
             { "name": "backgroundImageAlt", "selector": "div:nth-child(1)>picture>img[alt]" },
-            { "name": "text", "selector": "div:nth-child(2)" }
+            { "name": "text", "selector": "div:nth-child(2)" },
+            { "name": "style", "selector": "div:nth-child(3)>p" },
+            { "name": "cta", "selector": "div:nth-child(4)>p" }
           ]
         }
       }
@@ -31,7 +33,7 @@
   ],
   "models": [
     {
-      "id": "carousel-item",
+      "id": "carousel-card",
       "fields": [
         {
           "component": "reference",
@@ -44,13 +46,71 @@
           "component": "text",
           "valueType": "string",
           "name": "backgroundImageAlt",
-          "label": "Background Image Alt"
+          "label": "Background Image Alt",
+          "value": ""
         },
         {
           "component": "richtext",
           "name": "text",
           "label": "Text",
-          "valueType": "string"
+          "valueType": "string",
+          "value":""
+        },
+        {
+          "component": "select",
+          "valueType": "string",
+          "name": "style",
+          "label": "Style",
+          "options": [
+            {
+              "name": "Default",
+              "value": "default"
+            },
+            {
+              "name": "Image Top",
+              "value": "image-top"
+            },
+            {
+              "name": "Image Bottom",
+              "value": "image-bottom"
+            },
+            {
+              "name": "Teaser Overlay",
+              "value": "teaser-overlay"
+            },
+            {
+              "name": "Teaser Card",
+              "value": "teaser-card"
+            }
+          ],
+          "value": "default",
+          "required": true
+        },
+        {
+          "component": "select",
+          "valueType": "string",
+          "name": "cta",
+          "label": "CTA",
+          "options": [
+            {
+              "name": "Link",
+              "value": "link"
+            },
+            {
+              "name": "Primary Button",
+              "value": "primary-button"
+            },
+            {
+              "name": "Secondary Button",
+              "value": "secondary-button"
+            },
+            {
+              "name": "Dark Button",
+              "value": "dark-button"
+            }
+          ],
+          "value": "link",
+          "required": true
         }
       ]
     }
@@ -58,7 +118,7 @@
   "filters": [
     {
       "id": "carousel",
-      "components": ["carousel-item"]
+      "components": ["carousel-card"]
     }
   ]
 }
