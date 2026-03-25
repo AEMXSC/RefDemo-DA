@@ -76,7 +76,7 @@ function getVideoElement(source, autoplay, background) {
   return video;
 }
 
-const loadVideoEmbed = (block, link, autoplay, background) => {
+const loadVideoEmbed = (block, container, link, autoplay, background) => {
   if (block.dataset.embedLoaded === 'true') {
     return;
   }
@@ -87,19 +87,19 @@ const loadVideoEmbed = (block, link, autoplay, background) => {
 
   if (isYoutube) {
     const embedWrapper = embedYoutube(url, autoplay, background);
-    block.append(embedWrapper);
+    container.append(embedWrapper);
     embedWrapper.querySelector('iframe').addEventListener('load', () => {
       block.dataset.embedLoaded = true;
     });
   } else if (isVimeo) {
     const embedWrapper = embedVimeo(url, autoplay, background);
-    block.append(embedWrapper);
+    container.append(embedWrapper);
     embedWrapper.querySelector('iframe').addEventListener('load', () => {
       block.dataset.embedLoaded = true;
     });
   } else {
     const videoEl = getVideoElement(link, autoplay, background);
-    block.append(videoEl);
+    container.append(videoEl);
     videoEl.addEventListener('canplay', () => {
       block.dataset.embedLoaded = true;
     });
@@ -108,8 +108,12 @@ const loadVideoEmbed = (block, link, autoplay, background) => {
 
 export default async function decorate(block) {
   const placeholder = block.querySelector('picture');
-  const link = block.querySelector('a').href;
-  block.textContent = '';
+  const anchor = block.querySelector('a');
+  const link = anchor?.href ?? anchor?.textContent?.trim() ?? '';
+  const row = block.querySelector(':scope > div');
+  const col = row?.querySelector(':scope > div');
+  const container = col || block;
+  container.textContent = '';
   block.dataset.embedLoaded = false;
 
   const autoplay = block.classList.contains('autoplay');
@@ -126,10 +130,10 @@ export default async function decorate(block) {
       );
       wrapper.addEventListener('click', () => {
         wrapper.remove();
-        loadVideoEmbed(block, link, true, false);
+        loadVideoEmbed(block, container, link, true, false);
       });
     }
-    block.append(wrapper);
+    container.append(wrapper);
   }
 
   if (!placeholder || autoplay) {
@@ -137,7 +141,7 @@ export default async function decorate(block) {
       if (entries.some((e) => e.isIntersecting)) {
         observer.disconnect();
         const playOnLoad = autoplay && !prefersReducedMotion.matches;
-        loadVideoEmbed(block, link, playOnLoad, autoplay);
+        loadVideoEmbed(block, container, link, playOnLoad, autoplay);
       }
     });
     observer.observe(block);

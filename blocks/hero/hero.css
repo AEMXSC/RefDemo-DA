@@ -1,3 +1,5 @@
+/* stylelint-disable no-descending-specificity, no-duplicate-selectors */
+
 /* --------------------------
    Base Hero Layout
 --------------------------- */
@@ -85,7 +87,7 @@
 
 .hero-wrapper .button-container.cta-button a.button::after {
   content: "\f105";
-  font-family: 'Font Awesome 5 Solid';
+  font-family: 'Font Awesome 5 Solid', sans-serif;
   font-size: 20px;
   margin-left: 8px;
   transition: all 0.3s ease;
@@ -93,10 +95,10 @@
 }
 
 .hero-wrapper .button-container.cta-button a.button:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: rgb(255 255 255 / 10%) !important;
   color: var(--text-light) !important;
   border-color: var(--text-light) !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 4px 8px rgb(0 0 0 / 30%) !important;
   transform: translateY(-1px);
 }
 
@@ -114,7 +116,7 @@
 
 .hero-wrapper .button-container.cta-button-secondary a.button::after {
   content: "\f105";
-  font-family: 'Font Awesome 5 Solid';
+  font-family: 'Font Awesome 5 Solid', sans-serif;
   font-size: 20px;
   margin-left: 8px;
   transition: all 0.3s ease;
@@ -159,13 +161,16 @@
   flex-direction: row;
   justify-content: flex-start;
 }
+
 .hero.image-right {
   flex-direction: row-reverse;
   justify-content: flex-start;
 }
+
 .hero.image-top {
   flex-direction: column;
 }
+
 .hero.image-bottom {
   flex-direction: column-reverse;
 }
@@ -242,14 +247,16 @@
 picture {
     line-height: 0;
 }
+
 /* Box shadow for layout variations */
 .hero.image-left,
 .hero.image-right,
 .hero.image-top,
 .hero.image-bottom {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 15%);
   overflow: hidden;
 }
+
 .hero.image-left h2,
 .hero.image-left h3,
 .hero.image-left h4,
@@ -269,6 +276,7 @@ picture {
   color: var(--text-color);
     text-shadow: unset;
 }
+
 .hero.image-left h1,.hero.image-right h1{
   color: var(--text-color);
   text-shadow: unset;
@@ -282,7 +290,7 @@ picture {
 .hero.image-background-text-left h6,
 .hero.image-background-text-left p {
   text-align: left;
-  margin: 0 0 20px 0;
+  margin: 0 0 20px;
   width: 100%;
   max-width: none;
   color: var(--text-light);
@@ -301,7 +309,7 @@ picture {
 .hero.image-background-text-right h6,
 .hero.image-background-text-right p {
   text-align: left;
-  margin: 0 0 20px 0;
+  margin: 0 0 20px;
   width: 100%;
   max-width: none;
   color: var(--text-light);
@@ -325,18 +333,36 @@ picture {
 .hero.image-bottom h4,
 .hero.image-bottom h5,
 .hero.image-bottom h6,
-.hero.image-bottom p{
+.hero.image-bottom p {
   text-align: center;
   max-width: none;
   color: var(--text-color);
-    text-shadow: unset;
+  text-shadow: unset;
 }
+
 /* --------------------------
    Responsive
 --------------------------- */
 @media (width >= 900px) {
   .hero { padding: 40px 32px; }
   .hero-wrapper a.button { padding: 14px 28px; font-size: 18px; }
+}
+
+@media (width < 1024px) {
+  .hero { min-height: 650px; }
+  
+  .hero.image-background-text-left {
+    padding: 50px 30px;
+  }
+  
+  .hero.image-background-text-right {
+    padding: 50px 30px;
+  }
+
+  .hero-wrapper a.button {
+    padding: 14px 28px;
+    font-size: 18px;
+  }
 }
 
 @media (width < 1024px) {
@@ -484,7 +510,7 @@ picture {
   background: rgb(0 0 0 / 50%);
 }
 
-/*button theme hero specific*/
+/* button theme hero specific */
 .hero.block.overlay .button-container.cta-link a.button,.hero.image-background-text-left .button-container.cta-link a.button,.hero.image-background-text-right .button-container.cta-link a.button {
   color: var(--text-light);
 }

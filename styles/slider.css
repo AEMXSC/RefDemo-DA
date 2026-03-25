@@ -95,7 +95,8 @@ html[dir="rtl"] .section > div.carousel-wrapper {
 .carousel > ul {
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(5, 32%);
+  grid-auto-flow: column;
+  grid-auto-columns: 32%;
   grid-template-rows: 1fr;
   gap: 0 25px;
   overflow: scroll hidden;
@@ -227,7 +228,7 @@ html[dir="rtl"] .section > div.carousel-wrapper {
   }
 
   .carousel > ul {
-    grid-template-columns: repeat(5, 32%);
+    grid-auto-columns: 32%;
     gap: 0 25px;
   }
 
@@ -336,7 +337,7 @@ html[dir="rtl"] .section > div.carousel-wrapper {
   }
 
   .carousel > ul {
-    grid-template-columns: repeat(5, 32%);
+    grid-auto-columns: 32%;
     gap: 0 25px;
   }
 }

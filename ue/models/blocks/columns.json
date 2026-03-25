@@ -55,8 +55,27 @@
             }
           }
         ]
-      }
-    ],
+      },
+      {
+        "id": "columns-cell",
+        "fields": [
+          {
+            "component": "richtext",
+            "valueType": "string",
+            "name": "text",
+            "label": "Text",
+            "value": ""
+          },
+          {
+            "component": "reference",
+            "valueType": "string",
+            "name": "image",
+            "label": "Image",
+            "multi": false
+          }
+        ]
+    }
+  ],
     "filters": [
       {
         "id": "columns",
@@ -66,7 +85,9 @@
       },
       {
         "id": "columns-row",
-        "components": []
+        "components": [
+          "columns-cell"
+        ]
       },
       {
         "id": "columns-cell",

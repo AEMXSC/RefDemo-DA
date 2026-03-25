@@ -1,10 +1,7 @@
-/**
- *
- * @param {Element} block
- */
 export default function decorate(block) {
   // Get the enable underline setting from the block content (3rd div)
   const enableUnderline = block.querySelector(':scope div:nth-child(3) > div')?.textContent?.trim() || 'true';
+
   // Get the layout Style from the block content (4th div)
   const layoutStyle = block.querySelector(':scope div:nth-child(4) > div')?.textContent?.trim() || 'overlay';
 

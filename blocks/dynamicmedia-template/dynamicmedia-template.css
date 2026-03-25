@@ -1,3 +1,13 @@
-.dynamicmedia-template-wrapper{
-    text-align : center;
+.dynamicmedia-template-wrapper {
+  text-align: center;
+}
+
+.dynamicmedia-template {
+  overflow: hidden;
+}
+
+.dynamicmedia-template .dm-template-image {
+  width: 100%;
+  display: block;
+  object-fit: cover;
 }

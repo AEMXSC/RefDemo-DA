@@ -1,16 +1,14 @@
 import {
   div, a, span, img, video, source, button,
-  h1,
+  h2,
 } from '../../scripts/dom-helpers.js';
-import { readBlockConfig } from '../../scripts/aem.js';
 
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const SAMPLE_VIDEO = 'https://v.ftcdn.net/02/35/97/40/700_F_235974059_oVftmgBBJ32tgsDvxRdMdtpQDMfNFWEt_ST.mp4';
 
 function createVideoPlayer(videoSrc) {
   const pauseIcon = `${window.hlx.codeBasePath}/icons/video-pause.svg`;
   const playIcon = `${window.hlx.codeBasePath}/icons/video-play.svg`;
 
-  // adding newlines after paren makes this harder to read
   /* eslint-disable function-paren-newline */
   const videoPlayer = div({ class: 'video-container' },
     div({ class: 'video-play', id: 'playButton', tabindex: 0 },
@@ -36,36 +34,29 @@ function createVideoPlayer(videoSrc) {
   return videoPlayer;
 }
 
-function createBackgroundImage(properties) {
-  let missingSrc;
-  if (!properties.imageref) missingSrc = true;
-  const imgSrc = (!missingSrc) ? properties.imageref : '';
-  const imgAlt = (properties.imagealt) ? properties.imagealt : '';
+function createBackgroundImage(imgSrc, imgAlt) {
   const imgBackground = div({ class: 'background-image' },
     img({ class: 'teaser-background', src: imgSrc, alt: imgAlt }),
   );
-
-  if (missingSrc) imgBackground.classList.add('inactive'); // hide img bg on initial authoring
-
+  if (!imgSrc) imgBackground.classList.add('inactive');
   return imgBackground;
 }
 
-function observeVideo(block, autoplay) {
+function observeVideo(block) {
   const videoPlayerEl = block.querySelector('video');
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        if (!(prefersReducedMotion.matches) && autoplay && (videoPlayerEl.dataset.state !== 'pause')) {
-          const playButton = document.getElementById('playButton');
-          const pauseButton = document.getElementById('pauseButton');
-          playButton.classList.add('inactive');
-          playButton.removeAttribute('tabindex');
-          pauseButton.classList.remove('inactive');
-          pauseButton.setAttribute('tabindex', 0); // hide 'play' button
-          videoPlayerEl.play(); // Play the video when it enters the viewport
+      if (!entry.isIntersecting) {
+        videoPlayerEl.pause();
+        videoPlayerEl.dataset.state = 'pause';
+        const playButton = document.getElementById('playButton');
+        const pauseButton = document.getElementById('pauseButton');
+        if (playButton && pauseButton) {
+          playButton.classList.remove('inactive');
+          playButton.setAttribute('tabindex', 0);
+          pauseButton.classList.add('inactive');
+          pauseButton.removeAttribute('tabindex');
         }
-      } else {
-        videoPlayerEl.pause(); // Pause the video when it leaves the viewport
       }
     });
   }, { threshold: 0.5 });
@@ -77,10 +68,9 @@ function attachListeners() {
   const playButton = document.getElementById('playButton');
   const pauseButton = document.getElementById('pauseButton');
 
-  // Play the video when the play button is clicked or a keyboard button pressed
   ['click', 'keydown'].forEach((eventType) => {
     playButton.addEventListener(eventType, (event) => {
-      if (eventType === 'keydown' && event.key !== 'Enter') return; // escape non-enter keys
+      if (eventType === 'keydown' && event.key !== 'Enter') return;
       playButton.classList.add('inactive');
       playButton.removeAttribute('tabindex');
       pauseButton.classList.remove('inactive');
@@ -93,7 +83,7 @@ function attachListeners() {
 
   ['click', 'keydown'].forEach((eventType) => {
     pauseButton.addEventListener(eventType, (event) => {
-      if (eventType === 'keydown' && event.key !== 'Enter') return; // escape non-enter keys
+      if (eventType === 'keydown' && event.key !== 'Enter') return;
       playButton.classList.remove('inactive');
       playButton.setAttribute('tabindex', 0);
       pauseButton.classList.add('inactive');
@@ -106,23 +96,38 @@ function attachListeners() {
 }
 
 export default function decorate(block) {
-  const rteElementTag = Array.from(block.querySelectorAll('p'))
-    .find((el) => el.textContent.trim() === 'teaserBlurb');
-  const rteElement = rteElementTag?.parentElement?.nextElementSibling;
-  const rteContent = rteElement?.querySelector('p')?.innerHTML;
-  const sampleVideo = 'https://publish-p16362-e1620892.adobeaemcloud.com/content/dam/wknd-universal/wknd-banner.mp4';
+  const rows = [...block.children];
+  const getCell = (i) => rows[i]?.querySelector(':scope > div');
 
-  const properties = readBlockConfig(block);
+  const blurbCell = getCell(0);
+  const styleCell = getCell(1);
+  const videoCell = getCell(2);
+  const imageCell = getCell(3);
+  const buttonCell = getCell(4);
+
+  const blurbP = blurbCell?.querySelector('p');
+  const teaserBlurb = blurbP ? blurbP.innerHTML : (blurbCell?.textContent?.trim() || 'Title');
+
+  const teaserStyle = styleCell?.textContent?.trim().toLowerCase() || '';
+
+  const videoLink = videoCell?.querySelector('a');
+  const videoUrl = videoLink?.href || videoCell?.textContent?.trim() || '';
+
+  const imgEl = imageCell?.querySelector('img');
+  const imgSrc = imgEl?.getAttribute('src') || '';
+  const imgAlt = imgEl?.getAttribute('alt') || '';
+
+  const buttonText = buttonCell?.textContent?.trim() || 'Button';
+
+  const isVideo = teaserStyle === 'video';
+  const videoReference = isVideo && videoUrl ? videoUrl : SAMPLE_VIDEO;
+
   const swooshFirst = `${window.hlx.codeBasePath}/icons/teaser_innerswoosh.svg`;
   const swooshSecond = `${window.hlx.codeBasePath}/icons/teaser_outerswoosh.svg`;
-  const isVideo = (properties.teaserstyle && properties.teaserstyle === 'video');
-  const videoAutoplay = (properties.videobehavior && properties.videobehavior === 'autoplay');
-  const buttonText = (properties['btn-text']) ? properties['btn-text'] : 'Button';
-  const buttonStyle = (properties['btn-style']) ? properties['btn-style'] : 'dark-bg';
-  const buttonLink = (properties['btn-link']) ? properties['btn-link'] : '';
-  const videoReference = isVideo ? properties.videoreference : sampleVideo;
+
+  /* eslint-disable function-paren-newline */
   const teaser = div({ class: 'teaser-container' },
-    isVideo ? createVideoPlayer(videoReference) : createBackgroundImage(properties),
+    isVideo ? createVideoPlayer(videoReference) : createBackgroundImage(imgSrc, imgAlt),
     div({ class: 'teaser-swoosh-wrapper' },
       div({ class: 'swoosh-bg' }),
       div({ class: 'swoosh-layers' },
@@ -130,9 +135,9 @@ export default function decorate(block) {
         img({ class: 'swoosh second', src: swooshSecond, alt: 'background swoosh second' }),
       ),
       div({ class: 'teaser-title-wrapper' },
-        h1({ class: 'teaser-title' }),
+        h2({ class: 'teaser-title' }),
         div({ class: 'button-container' },
-          a({ id: 'button', href: buttonLink, class: `button ${buttonStyle}` },
+          a({ id: 'button', href: '', class: 'button dark-bg' },
             span({ class: 'button-text' }, buttonText),
           ),
         ),
@@ -140,11 +145,12 @@ export default function decorate(block) {
     ),
   );
 
-  teaser.querySelector('.teaser-title').innerHTML = properties.teaserblurb ? rteContent : 'Title';
+  teaser.querySelector('.teaser-title').innerHTML = teaserBlurb;
   block.innerHTML = '';
   block.appendChild(teaser);
 
-  // add observer for video and listeners for play/pause
-  if (isVideo) observeVideo(block, videoAutoplay);
-  if (isVideo) attachListeners();
+  if (isVideo) {
+    observeVideo(block);
+    attachListeners();
+  }
 }

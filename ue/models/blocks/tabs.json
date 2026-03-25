@@ -7,8 +7,8 @@
       "filter": "tabs",
       "plugins": {
         "da": {
-          "rows": 1,
-          "columns": 2
+          "rows": 0,
+          "columns": 0
         }
       }
     },
@@ -19,10 +19,14 @@
       "plugins": {
         "da": {
           "rows": 1,
-          "columns": 2,
+          "columns": 5,
           "fields": [
             { "name": "title", "selector": "div:nth-child(1)>p:nth-child(1)" },
-            { "name": "content", "selector": "div:nth-child(2)" }
+            { "name": "heading", "selector": "div:nth-child(2)>p:nth-child(1)" },
+            { "name": "headingType", "selector": "div:nth-child(3)>p:nth-child(1)" },
+            { "name": "image", "selector": "div:nth-child(4)>picture>img[src]" },
+            { "name": "imageAlt", "selector": "div:nth-child(4)>picture>img[alt]" },
+            { "name": "content", "selector": "div:nth-child(5)" }
           ]
         }
       }
@@ -37,15 +41,68 @@
           "name": "title",
           "valueType": "string",
           "label": "Tab Name",
+          "multi": false
+        },
+        {
+          "component": "text",
+          "name": "heading",
+          "valueType": "string",
+          "label": "Heading",
+          "multi": false
+        },
+        {
+          "component": "select",
+          "name": "headingType",
+          "label": "Heading Type",
+          "options": [
+            {
+              "name": "H1",
+              "value": "h1"
+            },
+            {
+              "name": "H2",
+              "value": "h2"
+            },
+            {
+              "name": "H3",
+              "value": "h3"
+            },
+            {
+              "name": "H4",
+              "value": "h4"
+            },
+            {
+              "name": "H5",
+              "value": "h5"
+            },
+            {
+              "name": "H6",
+              "value": "h6"
+            }
+          ],
           "multi": false,
-          "value": ""
+          "valueType": "string",
+          "value": "h3"
+        },
+        {
+          "component": "reference",
+          "valueType": "string",
+          "name": "image",
+          "label": "Image",
+          "multi": false
+        },
+        {
+          "component": "text",
+          "valueType": "string",
+          "name": "imageAlt",
+          "label": "Image Alt Text",
+          "multi": false
         },
         {
           "component": "richtext",
           "name": "content",
           "label": "Content",
-          "valueType": "string",
-          "value": ""
+          "valueType": "string"
         }
       ]
     }

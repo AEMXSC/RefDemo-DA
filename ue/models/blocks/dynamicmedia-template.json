@@ -6,12 +6,12 @@
       "model": "dynamicmedia-template",
       "plugins": {
         "da": {
-          "rows": 1,
+          "rows": 3,
           "columns": 1,
           "fields": [
-            { "name": "type", "selector": "div:nth-child(1)>p:nth-child(1)" },
-            { "name": "dynamicMediaUrl", "selector": "div:nth-child(2)>div:nth-child(1)>p:nth-child(1)>a:nth-child(1)[href]" },
-            { "name": "variableMappings", "selector": "div:nth-child(3)>div:nth-child(1)>p:nth-child(1)"}
+            { "name": "type", "selector": "div:nth-child(1)>div:nth-child(1)>p" },
+            { "name": "dynamicMediaUrl", "selector": "div:nth-child(2)>div:nth-child(1)>p" },
+            { "name": "variableMappings", "selector": "div:nth-child(3)>div:nth-child(1)>p" }
           ]
         }
       }
@@ -22,22 +22,31 @@
       "id": "dynamicmedia-template",
       "fields": [
         {
-          "component": "text",
+          "component": "select",
           "name": "type",
           "label": "Type",
-          "required": true
+          "required": true,
+          "valueType": "string",
+          "options": [
+            {
+              "name": "Inline",
+              "value": "inline"
+            }
+          ],
+          "value": "inline"
         },
         {
           "component": "text",
           "name": "dynamicMediaUrl",
           "label": "Dynamic Media URL",
-          "required": true
+          "required": true,
+          "valueType": "string"
         },
         {
           "component": "text",
           "name": "variableMappings",
           "label": "Variable Mappings",
-          "multi": true
+          "valueType": "string"
         }
       ]
     }

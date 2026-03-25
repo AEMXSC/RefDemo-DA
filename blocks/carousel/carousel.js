@@ -13,39 +13,35 @@ export default function decorate(block) {
   const leftContent = document.createElement('div');
 
   // Find the first row index that should be a carousel item
-  // This is typically the first row with 4 children (image, content, style config, cta config)
-  let carouselStartIndex = 0;
+  let carouselStartIndex = -1;
   [...block.children].forEach((row, index) => {
-    if (row.children.length === 4 && carouselStartIndex === 0 && index > 0) {
+    if (row.children.length === 4 && carouselStartIndex === -1) {
       carouselStartIndex = index;
     }
   });
 
-  // If no carousel items found, default to starting after row 3
-  if (carouselStartIndex === 0) {
+  if (carouselStartIndex === -1) {
     carouselStartIndex = 4;
   }
 
   [...block.children].forEach((row) => {
     if (i >= carouselStartIndex) {
       const li = document.createElement('li');
-      // Read card style from the third div (index 2)
       const styleDiv = row.children[2];
       const styleParagraph = styleDiv?.querySelector('p');
       const cardStyle = styleParagraph?.textContent?.trim() || 'default';
       if (cardStyle && cardStyle !== 'default') {
         li.className = cardStyle;
       }
-      // Read CTA style from the fourth div (index 3)
+
       const ctaDiv = row.children[3];
       const ctaParagraph = ctaDiv?.querySelector('p');
       const ctaStyle = ctaParagraph?.textContent?.trim() || 'default';
 
       moveInstrumentation(row, li);
       while (row.firstElementChild) li.append(row.firstElementChild);
-      // Process the li children to identify and style them correctly
+
       [...li.children].forEach((div, index) => {
-        // First div (index 0) - Image
         if (index === 0) {
           div.className = 'cards-card-image';
         } else if (index === 1) {
@@ -54,37 +50,35 @@ export default function decorate(block) {
           div.className = 'cards-config';
           const p = div.querySelector('p');
           if (p) {
-            p.style.display = 'none'; // Hide the configuration text
+            p.style.display = 'none';
           }
         } else if (index === 3) {
           div.className = 'cards-config';
           const p = div.querySelector('p');
           if (p) {
-            p.style.display = 'none'; // Hide the configuration text
+            p.style.display = 'none';
           }
         } else {
           div.className = 'cards-card-body';
         }
       });
-      // Apply CTA styles to button containers
+
       const buttonContainers = li.querySelectorAll('p.button-container');
       buttonContainers.forEach((buttonContainer) => {
-        // Remove any existing CTA classes
         buttonContainer.classList.remove('default', 'cta-button', 'cta-button-secondary', 'cta-button-dark', 'cta-default');
-        // Add the correct CTA class
         buttonContainer.classList.add(ctaStyle);
       });
+
       slider.append(li);
     } else {
-      // Skip rows that contain images - they should not be in leftContent
-      // This prevents images from appearing outside/above the carousel
       const hasImage = row.querySelector('img') || row.querySelector('picture');
       if (!hasImage) {
         if (row.firstElementChild?.firstElementChild) {
           leftContent.append(row.firstElementChild.firstElementChild);
         }
         if (row.firstElementChild) {
-          leftContent.append(row.firstElementChild.firstElementChild || '');
+          const first = row.firstElementChild.firstElementChild;
+          if (first) leftContent.append(first);
         }
         leftContent.className = 'default-content-wrapper';
       }
@@ -98,7 +92,6 @@ export default function decorate(block) {
     img.closest('picture').replaceWith(optimizedPic);
   });
 
-  // Accessibility: preserve visual style but expose proper heading level to AT
   const base = parseInt(block?.dataset?.headingLevel, 10);
   const ariaLevel = Number.isFinite(base) ? Math.min(Math.max(base, 1) + 1, 6) : 3;
   slider.querySelectorAll('h4,h5,h6').forEach((node) => {

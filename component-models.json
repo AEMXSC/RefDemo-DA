@@ -116,24 +116,36 @@
       },
       {
         "component": "select",
-        "name": "variant",
+        "name": "position",
+        "label": "Image Position",
         "valueType": "string",
-        "label": "Variant",
-        "required": true,
         "options": [
           {
             "name": "Image Top",
             "value": "image-top"
           },
           {
-            "name": "Image Bottom",
-            "value": "image-bottom"
+            "name": "Image Right",
+            "value": "image-right"
           },
           {
             "name": "Image Left",
             "value": "image-left"
+          },
+          {
+            "name": "Image Bottom",
+            "value": "image-bottom"
+          },
+          {
+            "name": "Teaser Overlay",
+            "value": "teaser-overlay"
+          },
+          {
+            "name": "Teaser Card",
+            "value": "teaser-card"
           }
-        ]
+        ],
+        "value": "image-top"
       }
     ]
   },
@@ -236,25 +248,53 @@
     ]
   },
   {
+    "id": "columns-cell",
+    "fields": [
+      {
+        "component": "richtext",
+        "valueType": "string",
+        "name": "text",
+        "label": "Text",
+        "value": ""
+      },
+      {
+        "component": "reference",
+        "valueType": "string",
+        "name": "image",
+        "label": "Image",
+        "multi": false
+      }
+    ]
+  },
+  {
     "id": "dynamicmedia-template",
     "fields": [
       {
-        "component": "text",
+        "component": "select",
         "name": "type",
         "label": "Type",
-        "required": true
+        "required": true,
+        "valueType": "string",
+        "options": [
+          {
+            "name": "Inline",
+            "value": "inline"
+          }
+        ],
+        "value": "inline"
       },
       {
         "component": "text",
         "name": "dynamicMediaUrl",
         "label": "Dynamic Media URL",
-        "required": true
+        "required": true,
+        "valueType": "string"
       },
       {
         "component": "text",
         "name": "variableMappings",
         "label": "Variable Mappings",
-        "multi": true
+        "valueType": "string"
       }
     ]
   },
@@ -344,15 +384,68 @@
         "name": "title",
         "valueType": "string",
         "label": "Tab Name",
+        "multi": false
+      },
+      {
+        "component": "text",
+        "name": "heading",
+        "valueType": "string",
+        "label": "Heading",
+        "multi": false
+      },
+      {
+        "component": "select",
+        "name": "headingType",
+        "label": "Heading Type",
+        "options": [
+          {
+            "name": "H1",
+            "value": "h1"
+          },
+          {
+            "name": "H2",
+            "value": "h2"
+          },
+          {
+            "name": "H3",
+            "value": "h3"
+          },
+          {
+            "name": "H4",
+            "value": "h4"
+          },
+          {
+            "name": "H5",
+            "value": "h5"
+          },
+          {
+            "name": "H6",
+            "value": "h6"
+          }
+        ],
         "multi": false,
-        "value": ""
+        "valueType": "string",
+        "value": "h3"
+      },
+      {
+        "component": "reference",
+        "valueType": "string",
+        "name": "image",
+        "label": "Image",
+        "multi": false
+      },
+      {
+        "component": "text",
+        "valueType": "string",
+        "name": "imageAlt",
+        "label": "Image Alt Text",
+        "multi": false
       },
       {
         "component": "richtext",
         "name": "content",
         "label": "Content",
-        "valueType": "string",
-        "value": ""
+        "valueType": "string"
       }
     ]
   },
@@ -372,7 +465,7 @@
         "required": true
       },
       {
-        "component": "text",
+        "component": "richtext",
         "name": "videoReference",
         "label": "Video Reference",
         "required": true
@@ -402,23 +495,11 @@
     "id": "video",
     "fields": [
       {
-        "component": "reference",
-        "name": "posterImage",
-        "label": "Poster Image",
-        "valueType": "string"
-      },
-      {
         "component": "text",
         "name": "videoUrl",
         "label": "Video URL",
         "valueType": "string",
         "required": true
-      },
-      {
-        "component": "text",
-        "name": "videoUrlText",
-        "label": "Video URL Text",
-        "valueType": "string"
       }
     ]
   }

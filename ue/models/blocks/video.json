@@ -9,9 +9,7 @@
           "rows": 1,
           "columns": 1,
           "fields": [
-            { "name": "posterImage", "selector": "div:nth-child(1)>div:nth-child(1)>p:nth-child(1)>picture>img[src]" },
-            { "name": "videoUrl", "selector": "div:nth-child(1)>div:nth-child(1)>p:nth-child(2)>a[href]" },
-            { "name": "videoUrlText", "selector": "div:nth-child(1)>div:nth-child(1)>p:nth-child(2)>a" }
+            { "name": "videoUrl", "selector": "div>div>p>a[href]" }
           ]
         }
       }
@@ -22,23 +20,11 @@
       "id": "video",
       "fields": [
         {
-          "component": "reference",
-          "name": "posterImage",
-          "label": "Poster Image",
-          "valueType": "string"
-        },
-        {
           "component": "text",
           "name": "videoUrl",
           "label": "Video URL",
           "valueType": "string",
           "required": true
-        },
-        {
-          "component": "text",
-          "name": "videoUrlText",
-          "label": "Video URL Text",
-          "valueType": "string"
         }
       ]
     }

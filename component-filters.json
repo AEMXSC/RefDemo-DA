@@ -53,7 +53,9 @@
   },
   {
     "id": "columns-row",
-    "components": []
+    "components": [
+      "columns-cell"
+    ]
   },
   {
     "id": "columns-cell",

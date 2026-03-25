@@ -1,41 +1,75 @@
-.quote blockquote {
+.quote {
+  max-width: 800px;
   margin: 0 auto;
-  padding: 0 24px;
-  max-width: 900px;
+}
+
+.quote blockquote {
+  position: relative;
+  margin: 2rem 0;
+  padding: 1.5rem 2rem 1.5rem 2.5rem;
+  border-left: 4px solid var(--main-accent-color);
+  background-color: #f9fafb;
+  border-radius: 0 0.5rem 0.5rem 0;
 }
 
 @media (width >= 900px) {
   .quote blockquote {
-    padding: 0 32px;
+    padding: 2rem 3rem 2rem 3.5rem;
   }
 }
 
 .quote blockquote .quote-quotation {
-  font-size: 120%;
+  position: relative;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.25rem;
+  font-style: italic;
+  line-height: 1.7;
+  color: var(--dark-color, #131313);
+  padding-left: 2.5rem;
 }
 
-.quote blockquote .quote-quotation > :first-child {
-  text-indent: -0.5ch;
+@media (width >= 900px) {
+  .quote blockquote .quote-quotation {
+    font-size: 1.5rem;
+  }
 }
 
-.quote blockquote .quote-quotation > :first-child::before,
-.quote blockquote .quote-quotation > :last-child::after {
-  line-height: 0;
+.quote blockquote .quote-quotation::before {
+  content: '\201C';
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 4rem;
+  line-height: 1;
+  color: var(--main-accent-color);
+  position: absolute;
+  top: -0.25rem;
+  left: -0.25rem;
 }
 
-.quote blockquote .quote-quotation > :first-child::before {
-  content: "“";
-}
-
-.quote blockquote .quote-quotation > :last-child::after {
-  content: "”";
+.quote blockquote .quote-quotation p {
+  margin: 0;
 }
 
 .quote blockquote .quote-attribution {
-  text-align: right;
+  margin-top: 1rem;
+  padding-left: 2.5rem;
+  font-size: 0.95rem;
+  font-style: normal;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.02em;
 }
 
-.quote blockquote .quote-attribution > :first-child::before {
-  content: "—";
-  padding-right: 0.5ch;
+@media (width >= 900px) {
+  .quote blockquote .quote-attribution {
+    font-size: 1.05rem;
+  }
+}
+
+.quote blockquote .quote-attribution p {
+  margin: 0;
+}
+
+.quote blockquote .quote-attribution cite {
+  font-style: normal;
+  font-weight: 600;
 }
