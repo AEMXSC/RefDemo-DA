@@ -92,10 +92,10 @@ git branch --show-current
 ```
 
 Construct the preview URL:
-- Replace all `/` in the branch name with `-`
-- Format: `https://{branch-dashes}--{repo}--{org}.aem.page/drafts/{blockname}`
+- Format: `https://{branch}--{repo}--{org}.aem.page/drafts/{blockname}`
+- The branch name should be the bare block name (no slashes) as set up by `block-creator`
 
-Example: branch `block/feature-grid` → `https://block-feature-grid--refdemo-da--aemxsc.aem.page/drafts/feature-grid`
+Example: branch `feature-grid` → `https://feature-grid--refdemo-da--aemxsc.aem.page/drafts/feature-grid`
 
 Verify the URL is accessible:
 ```bash

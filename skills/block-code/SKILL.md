@@ -131,9 +131,9 @@ Fonts: `--body-font-family`, `--heading-font-family`, `--light-font-family`, `--
 
 Font sizes: `--body-font-size-m`, `--body-font-size-s`, `--body-font-size-xs`, `--heading-font-size-xxl`, `--heading-font-size-xl`, `--heading-font-size-l`, `--heading-font-size-m`, `--heading-font-size-s`, `--heading-font-size-xs`
 
-Spacing: `--spacing-none`, `--spacing-xsmall`, `--spacing-small`, `--spacing-medium`, `--spacing-large`, `--spacing-xlarge`, `--spacing-xxlarge`, `--spacing-huge`, `--spacing-xhuge`
+Spacing: `--spacing-none`, `--spacing-xtiny`, `--spacing-tiny`, `--spacing-xxsmall`, `--spacing-xsmall`, `--spacing-small`, `--spacing-regular`, `--spacing-medium`, `--spacing-large`, `--spacing-xlarge`, `--spacing-xxlarge`, `--spacing-huge`, `--spacing-xhuge`
 
-Border radius: `--border-radius-small`, `--border-radius-base`, `--border-radius-medium`, `--border-radius-large`
+Border radius: `--border-radius-none`, `--border-radius-small`, `--border-radius-base`, `--border-radius-medium`, `--border-radius-large`, `--border-radius-x-large`
 
 ## Step 4: Lint
 
@@ -144,8 +144,9 @@ npm run lint
 
 If errors remain after `lint:fix`, read each error and fix manually. Common issues:
 - Missing `.js` extension on imports — always include it
-- `no-param-reassign` — don't reassign `block` directly; operate on its children
-- CSS descending specificity — add `/* stylelint-disable no-descending-specificity */` at top of file only if truly unavoidable
+- `no-param-reassign` — don't reassign `block` directly; operate on its children. **Note:** This project's `.eslintrc.js` sets `no-param-reassign: [2, { props: false }]`, so modifying properties on parameters (e.g. `item.liked = true` in a forEach) is allowed.
+- CSS descending specificity — reorder selectors so lower-specificity rules come first, or add `/* stylelint-disable no-descending-specificity */` at top of file only if truly unavoidable
+- CSS `selector-class-pattern` — use kebab-case only for class names (e.g. `.pg-card-touched`, not `.pg-card--touched`)
 
 Retry up to 3 times. If lint still fails after 3 attempts, show the remaining errors to the user and ask for guidance.
 

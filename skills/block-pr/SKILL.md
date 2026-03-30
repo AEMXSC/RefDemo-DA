@@ -58,8 +58,10 @@ EOF
 ## Step 4: Push
 
 ```bash
-git push -u origin block/{blockname}
+git push -u origin {blockname}
 ```
+
+**Note:** The branch should be named with just the block name (e.g. `photo-gallery`), not a prefixed path like `block/photo-gallery`. Slashes in branch names break AEM preview URL formation.
 
 ## Step 5: Get Repo Info for the Preview URL
 
@@ -69,8 +71,7 @@ git branch --show-current
 ```
 
 Construct the preview URL:
-- Replace `/` with `-` in the branch name
-- Format: `https://{branch-dashes}--{repo}--{owner}.aem.page/drafts/{blockname}`
+- Format: `https://{branch}--{repo}--{owner}.aem.page/drafts/{blockname}`
 
 ## Step 6: Create the Pull Request
 
@@ -89,7 +90,7 @@ gh pr create --title "feat: add {blockname} block" --body "$(cat <<'EOF'
 {author contract table rows}
 
 ## Preview
-https://{branch-dashes}--{repo}--{owner}.aem.page/drafts/{blockname}
+https://{blockname}--{repo}--{owner}.aem.page/drafts/{blockname}
 
 ## Files Changed
 - `blocks/{blockname}/{blockname}.js` — block decoration logic

@@ -36,8 +36,10 @@ Run these commands:
 ```bash
 git checkout main
 git pull origin main
-git checkout -b block/{blockname}
+git checkout -b {blockname}
 ```
+
+**Important:** Use the bare block name (e.g. `photo-gallery`), not a prefixed path like `block/photo-gallery`. Slashes in branch names break AEM preview URL formation because AEM converts `/` to `-`, producing incorrect URLs.
 
 If the branch already exists, ask the user whether to reuse it or choose a different name.
 
@@ -53,7 +55,7 @@ Call each skill in order. Wait for each to complete before starting the next. Pa
 ## Step 5: User Satisfaction Gate
 
 After `/block-author` completes, show the user:
-- The DA preview URL: `https://{branch-with-slashes-as-dashes}--{repo}--{org}.aem.page/drafts/{blockname}`
+- The DA preview URL: `https://{branch}--{repo}--{org}.aem.page/drafts/{blockname}`
 - A summary of what was created
 
 Then ask: **"Does the block look good? Any changes before I raise the PR?"**
