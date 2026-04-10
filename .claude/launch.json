@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "aem-dev",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/navdeeps/Desktop/refdemo-da && aem up --no-open"],
+      "port": 3000
+    }
+  ]
+}

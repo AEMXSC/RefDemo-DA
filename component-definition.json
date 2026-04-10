@@ -276,6 +276,47 @@
           }
         },
         {
+          "title": "Promo Banner",
+          "id": "promo-banner",
+          "model": "promo-banner",
+          "plugins": {
+            "da": {
+              "rows": 5,
+              "columns": 2,
+              "fields": [
+                {
+                  "name": "image",
+                  "selector": "div:nth-child(1)>div:nth-child(1)>picture>img[src]"
+                },
+                {
+                  "name": "imageAlt",
+                  "selector": "div:nth-child(1)>div:nth-child(1)>picture>img[alt]"
+                },
+                {
+                  "name": "text",
+                  "selector": "div:nth-child(1)>div:nth-child(2)"
+                },
+                {
+                  "name": "badge",
+                  "selector": "div:nth-child(2)>div"
+                },
+                {
+                  "name": "countdown",
+                  "selector": "div:nth-child(3)>div"
+                },
+                {
+                  "name": "theme",
+                  "selector": "div:nth-child(4)>div"
+                },
+                {
+                  "name": "layout",
+                  "selector": "div:nth-child(5)>div"
+                }
+              ]
+            }
+          }
+        },
+        {
           "title": "Quote",
           "id": "quote",
           "model": "quote",

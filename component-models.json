@@ -341,6 +341,92 @@
     ]
   },
   {
+    "id": "promo-banner",
+    "fields": [
+      {
+        "component": "reference",
+        "valueType": "string",
+        "name": "image",
+        "label": "Image",
+        "multi": false
+      },
+      {
+        "component": "text",
+        "valueType": "string",
+        "name": "imageAlt",
+        "label": "Image Alt Text",
+        "value": ""
+      },
+      {
+        "component": "richtext",
+        "valueType": "string",
+        "name": "text",
+        "label": "Content (heading, description, CTA)",
+        "value": ""
+      },
+      {
+        "component": "text",
+        "valueType": "string",
+        "name": "badge",
+        "label": "Badge Text",
+        "value": ""
+      },
+      {
+        "component": "text",
+        "valueType": "string",
+        "name": "countdown",
+        "label": "Countdown End Date (ISO 8601)",
+        "value": ""
+      },
+      {
+        "component": "select",
+        "valueType": "string",
+        "name": "theme",
+        "label": "Color Theme",
+        "options": [
+          {
+            "name": "Purple",
+            "value": "purple"
+          },
+          {
+            "name": "Teal",
+            "value": "teal"
+          },
+          {
+            "name": "Coral",
+            "value": "coral"
+          },
+          {
+            "name": "Dark",
+            "value": "dark"
+          }
+        ],
+        "value": "purple"
+      },
+      {
+        "component": "select",
+        "valueType": "string",
+        "name": "layout",
+        "label": "Layout Variant",
+        "options": [
+          {
+            "name": "Split (Image + Text)",
+            "value": "split"
+          },
+          {
+            "name": "Centered (Hero)",
+            "value": "centered"
+          },
+          {
+            "name": "Minimal (Slim Bar)",
+            "value": "minimal"
+          }
+        ],
+        "value": "split"
+      }
+    ]
+  },
+  {
     "id": "quote",
     "fields": [
       {
