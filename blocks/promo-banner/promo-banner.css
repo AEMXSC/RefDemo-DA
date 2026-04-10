@@ -1,0 +1,490 @@
+/* stylelint-disable no-descending-specificity */
+
+/* =========================
+   Promo Banner — Base
+   ========================= */
+.promo-banner {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--border-radius-large);
+  padding: 48px 40px;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.promo-banner.promo-banner-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.promo-banner.promo-banner-hiding {
+  animation: promo-banner-dismiss 0.4s ease forwards;
+}
+
+@keyframes promo-banner-dismiss {
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+    height: 0;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+}
+
+/* =========================
+   Geometric Circles
+   ========================= */
+.promo-banner-circles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.promo-banner-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.15;
+}
+
+.promo-banner-circle-1 {
+  width: 200px;
+  height: 200px;
+  top: -60px;
+  right: -40px;
+  background: currentcolor;
+}
+
+.promo-banner-circle-2 {
+  width: 120px;
+  height: 120px;
+  bottom: -30px;
+  left: 10%;
+  background: currentcolor;
+  opacity: 0.1;
+}
+
+.promo-banner-circle-3 {
+  width: 80px;
+  height: 80px;
+  top: 30%;
+  right: 20%;
+  background: currentcolor;
+  opacity: 0.08;
+}
+
+/* =========================
+   Image
+   ========================= */
+.promo-banner-image {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 40%;
+  max-width: 400px;
+}
+
+.promo-banner-image picture {
+  display: block;
+  line-height: 0;
+}
+
+.promo-banner-image img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--border-radius-medium);
+  object-fit: cover;
+}
+
+/* =========================
+   Content
+   ========================= */
+.promo-banner-content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+}
+
+.promo-banner-content h1,
+.promo-banner-content h2,
+.promo-banner-content h3,
+.promo-banner-content h4,
+.promo-banner-content h5,
+.promo-banner-content h6 {
+  margin: 0 0 8px;
+  font-family: var(--heading-font-family);
+  line-height: 1.2;
+}
+
+.promo-banner-content p {
+  margin: 0 0 16px;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.promo-banner-content .button-wrapper {
+  margin-top: 20px;
+}
+
+.promo-banner-content .button {
+  display: inline-block;
+  padding: 12px 28px;
+  border-radius: 50px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-size: 15px;
+}
+
+.promo-banner-content .button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 20%);
+}
+
+/* =========================
+   Badge
+   ========================= */
+.promo-banner-badge {
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.promo-banner-badge span {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* =========================
+   Countdown Timer
+   ========================= */
+.promo-banner-countdown {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.promo-banner-countdown-segment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 48px;
+}
+
+.promo-banner-countdown-value {
+  font-size: 24px;
+  font-weight: 800;
+  font-family: var(--heading-font-family);
+  line-height: 1;
+  padding: 8px 12px;
+  border-radius: var(--border-radius-medium);
+}
+
+.promo-banner-countdown-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+  opacity: 0.7;
+}
+
+/* =========================
+   Close Button
+   ========================= */
+.promo-banner-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+  opacity: 0.6;
+  line-height: 1;
+  padding: 0;
+}
+
+.promo-banner-close:hover {
+  opacity: 1;
+  background: rgb(0 0 0 / 10%);
+}
+
+.promo-banner-close:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 2px;
+}
+
+/* =========================
+   Theme: Purple
+   ========================= */
+.promo-banner.promo-banner-purple {
+  background: linear-gradient(135deg, #6c3fc5 0%, #8b5cf6 50%, #a78bfa 100%);
+  color: #fff;
+}
+
+.promo-banner.promo-banner-purple .promo-banner-badge span {
+  background: rgb(255 255 255 / 20%);
+  color: #fff;
+}
+
+.promo-banner.promo-banner-purple .promo-banner-countdown-value {
+  background: rgb(255 255 255 / 15%);
+  color: #fff;
+}
+
+.promo-banner.promo-banner-purple .button {
+  background: #fff;
+  color: #6c3fc5;
+}
+
+.promo-banner.promo-banner-purple .promo-banner-close {
+  color: #fff;
+}
+
+/* =========================
+   Theme: Teal
+   ========================= */
+.promo-banner.promo-banner-teal {
+  background: linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #5eead4 100%);
+  color: #fff;
+}
+
+.promo-banner.promo-banner-teal .promo-banner-badge span {
+  background: rgb(255 255 255 / 20%);
+  color: #fff;
+}
+
+.promo-banner.promo-banner-teal .promo-banner-countdown-value {
+  background: rgb(255 255 255 / 15%);
+  color: #fff;
+}
+
+.promo-banner.promo-banner-teal .button {
+  background: #fff;
+  color: #0d9488;
+}
+
+.promo-banner.promo-banner-teal .promo-banner-close {
+  color: #fff;
+}
+
+/* =========================
+   Theme: Coral
+   ========================= */
+.promo-banner.promo-banner-coral {
+  background: linear-gradient(135deg, #dc2626 0%, #f97316 50%, #fb923c 100%);
+  color: #fff;
+}
+
+.promo-banner.promo-banner-coral .promo-banner-badge span {
+  background: rgb(255 255 255 / 20%);
+  color: #fff;
+}
+
+.promo-banner.promo-banner-coral .promo-banner-countdown-value {
+  background: rgb(255 255 255 / 15%);
+  color: #fff;
+}
+
+.promo-banner.promo-banner-coral .button {
+  background: #fff;
+  color: #dc2626;
+}
+
+.promo-banner.promo-banner-coral .promo-banner-close {
+  color: #fff;
+}
+
+/* =========================
+   Theme: Dark
+   ========================= */
+.promo-banner.promo-banner-dark {
+  background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 50%, #3b3b5c 100%);
+  color: #f1f1f1;
+}
+
+.promo-banner.promo-banner-dark .promo-banner-badge span {
+  background: rgb(255 255 255 / 12%);
+  color: #f1f1f1;
+}
+
+.promo-banner.promo-banner-dark .promo-banner-countdown-value {
+  background: rgb(255 255 255 / 10%);
+  color: #f1f1f1;
+}
+
+.promo-banner.promo-banner-dark .button {
+  background: #8b5cf6;
+  color: #fff;
+}
+
+.promo-banner.promo-banner-dark .promo-banner-close {
+  color: #f1f1f1;
+}
+
+/* =========================
+   Layout: Split (default)
+   ========================= */
+.promo-banner.promo-banner-split {
+  flex-direction: row;
+}
+
+/* =========================
+   Layout: Centered
+   ========================= */
+.promo-banner.promo-banner-centered {
+  flex-direction: column;
+  text-align: center;
+  padding: 60px 40px;
+}
+
+.promo-banner.promo-banner-centered .promo-banner-content {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.promo-banner.promo-banner-centered .promo-banner-countdown {
+  justify-content: center;
+}
+
+.promo-banner.promo-banner-centered .button-wrapper {
+  text-align: center;
+}
+
+/* =========================
+   Layout: Minimal (slim bar)
+   ========================= */
+.promo-banner.promo-banner-minimal {
+  padding: 14px 20px;
+  border-radius: var(--border-radius-medium);
+  gap: 16px;
+}
+
+.promo-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.promo-banner.promo-banner-minimal .promo-banner-badge {
+  margin-bottom: 0;
+}
+
+.promo-banner-minimal-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.promo-banner-minimal-text h1,
+.promo-banner-minimal-text h2,
+.promo-banner-minimal-text h3,
+.promo-banner-minimal-text h4,
+.promo-banner-minimal-text h5,
+.promo-banner-minimal-text h6 {
+  font-size: 16px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.promo-banner-minimal-text p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.promo-banner.promo-banner-minimal .promo-banner-countdown {
+  margin-top: 0;
+  gap: 8px;
+}
+
+.promo-banner.promo-banner-minimal .promo-banner-countdown-value {
+  font-size: 16px;
+  padding: 4px 8px;
+}
+
+.promo-banner.promo-banner-minimal .promo-banner-countdown-label {
+  font-size: 9px;
+}
+
+.promo-banner.promo-banner-minimal .promo-banner-countdown-segment {
+  min-width: 36px;
+}
+
+.promo-banner.promo-banner-minimal .promo-banner-close {
+  position: static;
+  flex-shrink: 0;
+}
+
+/* =========================
+   Wrapper overrides
+   ========================= */
+.promo-banner-container .promo-banner-wrapper {
+  max-width: 1200px;
+}
+
+/* =========================
+   Responsive
+   ========================= */
+@media (width < 600px) {
+  .promo-banner.promo-banner-split {
+    flex-direction: column;
+    padding: 32px 24px;
+    gap: 24px;
+  }
+
+  .promo-banner-image {
+    flex: none;
+    max-width: 100%;
+  }
+
+  .promo-banner-content h2 {
+    font-size: var(--heading-font-size-m);
+  }
+
+  .promo-banner-countdown {
+    gap: 8px;
+  }
+
+  .promo-banner-countdown-value {
+    font-size: 18px;
+    padding: 6px 8px;
+  }
+
+  .promo-banner.promo-banner-minimal .promo-banner-inner {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}
+
+@media (600px <= width < 900px) {
+  .promo-banner.promo-banner-split {
+    padding: 40px 32px;
+    gap: 32px;
+  }
+
+  .promo-banner-image {
+    flex: 0 0 35%;
+  }
+}
