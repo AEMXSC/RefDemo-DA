@@ -185,7 +185,16 @@ Check the browser console for JS errors — fix any that appear.
 
 ## Step 6: Confirm
 
-Once the local preview matches the design and lint is clean, report:
-- Files created: `blocks/{blockname}/{blockname}.js` and `blocks/{blockname}/{blockname}.css`
-- Lint status: clean
-- Any design decisions or trade-offs made (e.g. "used `<details>/<summary>` for the expand/collapse interaction")
+Once the local preview matches the design and lint is clean, pause and present your updates to the user for feedback:
+
+- Summarize the files created: `blocks/{blockname}/{blockname}.js` and `blocks/{blockname}/{blockname}.css`
+- State the lint status (should be clean)
+- List any notable design decisions or trade-offs (e.g. "used `<details>/<summary>` for expand/collapse")
+
+Then, clearly ask the user to review the block visually at:  
+`http://localhost:3000/drafts/{blockname}`
+
+Ask:  
+"Do you like how the block looks? Would you like any changes to the CSS or JS? If not, please confirm and we'll proceed to the next steps. If you'd like adjustments, let me know and we can iterate on the code and design as needed. Once you're satisfied, we'll continue."
+
+Pause here for explicit user confirmation before moving on.

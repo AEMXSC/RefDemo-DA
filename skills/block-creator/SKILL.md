@@ -12,10 +12,11 @@ You are the entry point for creating a new AEM EDS block. Your job is to gather 
 Accept any screenshot or pasted images the user has provided. Then ask the user for the following (ask all at once, not one by one):
 
 1. **Block name** — suggest one derived from the screenshot/description if not already given. Must be kebab-case lowercase (e.g. `feature-grid`, `promo-banner`). You will validate it in step 2.
-2. **Additional design/functionality comments** — anything not visible in the screenshot (hover states, animations, color variants, breakpoint behavior)
-3. **Interactivity requirements** — is this static content, expandable/collapsible, a carousel, tabbed, or something else?
-4. **Sample text preference** — lorem ipsum placeholder text, or domain-specific text (if domain-specific, ask what the content is about)
-5. **Sample images** — will the user provide images, or should placeholder images be used?
+2. **DA org and repo** — ask the user to confirm which Document Authoring (DA) org and repo to use for content authoring. Show a list of available orgs and repos if not provided. **Do not proceed to create the block until both DA org and repo are confirmed.**
+3. **Additional design/functionality comments** — anything not visible in the screenshot (hover states, animations, color variants, breakpoint behavior)
+4. **Interactivity requirements** — is this static content, expandable/collapsible, a carousel, tabbed, or something else?
+5. **Sample text preference** — lorem ipsum placeholder text, or domain-specific text (if domain-specific, ask what the content is about)
+6. **Sample images** — will the user provide images, or should placeholder images be used?
 
 ## Step 2: Validate Block Name
 
