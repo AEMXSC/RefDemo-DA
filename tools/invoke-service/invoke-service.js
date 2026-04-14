@@ -53,8 +53,38 @@ async function fetchUserProfile(token) {
 
 /* ── External service call ───────────────────────────────────────────── */
 
+function resolveOrgRepo(context) {
+  // DA SDK context may provide org/repo directly or via a URL / hash path
+  if (context.org && context.repo) {
+    return { org: context.org, repo: context.repo, path: context.path || '/' };
+  }
+
+  // Attempt to extract from a URL-like value (e.g. "da.live/edit#/{org}/{repo}/…")
+  const url = context.url || context.location || context.href || '';
+  const hashPath = url.includes('#') ? url.split('#')[1] : '';
+  const segments = (hashPath || '').split('/').filter(Boolean);
+  if (segments.length >= 2) {
+    return { org: segments[0], repo: segments[1], path: `/${segments.slice(2).join('/')}` };
+  }
+
+  // Fallback: iterate context values looking for a slash-separated path
+  const values = Object.values(context).filter((v) => typeof v === 'string');
+  const slashVal = values.find((v) => v.split('/').filter(Boolean).length >= 2);
+  if (slashVal) {
+    const parts = slashVal.split('/').filter(Boolean);
+    return { org: parts[0], repo: parts[1], path: `/${parts.slice(2).join('/')}` };
+  }
+
+  throw new Error(`Could not resolve org/repo from context: ${JSON.stringify(context)}`);
+}
+
 async function invokeExternalService(token, context) {
-  const { org, repo, path } = context;
+  // eslint-disable-next-line no-console
+  console.log('[invoke-service] DA SDK context →', JSON.stringify(context, null, 2));
+
+  const { org, repo, path } = resolveOrgRepo(context);
+  // eslint-disable-next-line no-console
+  console.log('[invoke-service] Resolved →', { org, repo, path });
 
   const [profile, config] = await Promise.all([
     fetchUserProfile(token),
