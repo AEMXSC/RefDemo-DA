@@ -1,0 +1,83 @@
+/* Invoke External Service – DA Library Plugin */
+
+body {
+  margin: 0;
+  font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, sans-serif;
+}
+
+sp-theme {
+  display: block;
+  height: 100vh;
+}
+
+#invoke-service-root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 16px 24px;
+}
+
+.invoke-service-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  width: 100%;
+}
+
+.invoke-service-message {
+  margin: 0;
+  font-size: 14px;
+  color: var(--spectrum-global-color-gray-800, #4b4b4b);
+}
+
+.invoke-service-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* Loading */
+.invoke-service-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Result */
+.invoke-service-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.invoke-service-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.invoke-service-icon.success {
+  color: var(--spectrum-global-color-green-600, #12805c);
+}
+
+.invoke-service-icon.failure {
+  color: var(--spectrum-global-color-red-600, #d7373f);
+}
+
+.invoke-service-label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--spectrum-global-color-gray-900, #323232);
+}
+
+.invoke-service-detail {
+  margin: 0;
+  font-size: 13px;
+  color: var(--spectrum-global-color-gray-700, #6e6e6e);
+}

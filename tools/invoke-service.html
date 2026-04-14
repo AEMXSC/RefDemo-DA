@@ -4,10 +4,25 @@
     <title>Invoke External Service</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="/tools/invoke-service/invoke-service.css">
+    <!-- Spectrum Web Components -->
+    <script type="module">
+      import 'https://jspm.io/@spectrum-web-components/theme@1.11.2/sp-theme.js';
+      import 'https://jspm.io/@spectrum-web-components/theme@1.11.2/theme-light.js';
+      import 'https://jspm.io/@spectrum-web-components/theme@1.11.2/scale-medium.js';
+      import 'https://jspm.io/@spectrum-web-components/button@1.11.2/sp-button.js';
+      import 'https://jspm.io/@spectrum-web-components/progress-circle@1.11.2/sp-progress-circle.js';
+      import 'https://jspm.io/@spectrum-web-components/icons-workflow@1.11.2/icons/sp-icon-checkmark-circle.js';
+      import 'https://jspm.io/@spectrum-web-components/icons-workflow@1.11.2/icons/sp-icon-close-circle.js';
+    </script>
+    <!-- DA SDK -->
     <script src="https://da.live/nx/utils/sdk.js" type="module"></script>
+    <!-- Plugin logic -->
+    <link rel="stylesheet" href="/tools/invoke-service/invoke-service.css">
     <script src="/tools/invoke-service/invoke-service.js" type="module"></script>
   </head>
   <body>
+    <sp-theme system="spectrum" color="light" scale="medium">
+      <div id="invoke-service-root"></div>
+    </sp-theme>
   </body>
 </html>
