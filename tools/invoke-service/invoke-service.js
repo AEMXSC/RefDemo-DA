@@ -3,6 +3,18 @@ import DA_SDK from 'https://da.live/nx/utils/sdk.js';
 
 const DEFAULT_SERVICE_URL = 'https://hook.app.workfrontfusion.com/xot9mamgl12su5dteagfw64f6lklf7ge';
 
+/* ── SVG icons (inline to avoid external deps) ───────────────────────── */
+
+const ICON_SUCCESS = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="none">
+  <circle cx="12" cy="12" r="11" fill="#12805c"/>
+  <path d="M7 12.5l3 3 7-7" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+const ICON_FAILURE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="none">
+  <circle cx="12" cy="12" r="11" fill="#d7373f"/>
+  <path d="M8 8l8 8M16 8l-8 8" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
+
 /* ── Placeholders config ─────────────────────────────────────────────── */
 
 function buildPlaceholdersUrl(org, repo) {
@@ -51,15 +63,13 @@ async function fetchUserProfile(token) {
   }
 }
 
-/* ── External service call ───────────────────────────────────────────── */
+/* ── Resolve org / repo from DA SDK context ──────────────────────────── */
 
 function resolveOrgRepo(context) {
-  // DA SDK context may provide org/repo directly or via a URL / hash path
   if (context.org && context.repo) {
     return { org: context.org, repo: context.repo, path: context.path || '/' };
   }
 
-  // Attempt to extract from a URL-like value (e.g. "da.live/edit#/{org}/{repo}/…")
   const url = context.url || context.location || context.href || '';
   const hashPath = url.includes('#') ? url.split('#')[1] : '';
   const segments = (hashPath || '').split('/').filter(Boolean);
@@ -67,7 +77,6 @@ function resolveOrgRepo(context) {
     return { org: segments[0], repo: segments[1], path: `/${segments.slice(2).join('/')}` };
   }
 
-  // Fallback: iterate context values looking for a slash-separated path
   const values = Object.values(context).filter((v) => typeof v === 'string');
   const slashVal = values.find((v) => v.split('/').filter(Boolean).length >= 2);
   if (slashVal) {
@@ -77,6 +86,8 @@ function resolveOrgRepo(context) {
 
   throw new Error(`Could not resolve org/repo from context: ${JSON.stringify(context)}`);
 }
+
+/* ── External service call ───────────────────────────────────────────── */
 
 async function invokeExternalService(token, context) {
   // eslint-disable-next-line no-console
@@ -134,15 +145,19 @@ async function invokeExternalService(token, context) {
   return resp.json();
 }
 
-/* ── UI rendering with Spectrum Web Components ───────────────────────── */
+/* ── UI rendering with Spectrum CSS ──────────────────────────────────── */
 
 function renderConfirm(root, { onConfirm, onCancel }) {
   root.innerHTML = `
     <div class="invoke-service-panel">
       <p class="invoke-service-message">Invoke the external service for this document?</p>
       <div class="invoke-service-actions">
-        <sp-button variant="secondary" id="invoke-cancel">Cancel</sp-button>
-        <sp-button variant="accent" id="invoke-confirm">Confirm</sp-button>
+        <button class="spectrum-Button spectrum-Button--sizeM spectrum-Button--secondary spectrum-Button--outline" id="invoke-cancel">
+          <span class="spectrum-Button-label">Cancel</span>
+        </button>
+        <button class="spectrum-Button spectrum-Button--sizeM spectrum-Button--accent spectrum-Button--fill" id="invoke-confirm">
+          <span class="spectrum-Button-label">Confirm</span>
+        </button>
       </div>
     </div>`;
   root.querySelector('#invoke-cancel').addEventListener('click', onCancel);
@@ -153,27 +168,41 @@ function renderLoading(root) {
   root.innerHTML = `
     <div class="invoke-service-panel">
       <div class="invoke-service-loading">
-        <sp-progress-circle indeterminate size="s" label="Executing…"></sp-progress-circle>
+        <div class="spectrum-ProgressCircle spectrum-ProgressCircle--indeterminate spectrum-ProgressCircle--small">
+          <div class="spectrum-ProgressCircle-track"></div>
+          <div class="spectrum-ProgressCircle-fills">
+            <div class="spectrum-ProgressCircle-fillMask1">
+              <div class="spectrum-ProgressCircle-fillSubMask1">
+                <div class="spectrum-ProgressCircle-fill"></div>
+              </div>
+            </div>
+            <div class="spectrum-ProgressCircle-fillMask2">
+              <div class="spectrum-ProgressCircle-fillSubMask2">
+                <div class="spectrum-ProgressCircle-fill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
         <p class="invoke-service-message">Executing external service…</p>
       </div>
     </div>`;
 }
 
 function renderResult(root, { isSuccess, message, onClose }) {
-  const icon = isSuccess
-    ? '<sp-icon-checkmark-circle class="invoke-service-icon success"></sp-icon-checkmark-circle>'
-    : '<sp-icon-close-circle class="invoke-service-icon failure"></sp-icon-close-circle>';
+  const icon = isSuccess ? ICON_SUCCESS : ICON_FAILURE;
   const label = isSuccess ? 'Success' : 'Failed';
 
   root.innerHTML = `
     <div class="invoke-service-panel">
       <div class="invoke-service-result">
-        ${icon}
+        <div class="invoke-service-icon">${icon}</div>
         <p class="invoke-service-label">${label}</p>
         <p class="invoke-service-detail">${message}</p>
       </div>
       <div class="invoke-service-actions">
-        <sp-button variant="accent" id="invoke-close">Close</sp-button>
+        <button class="spectrum-Button spectrum-Button--sizeM spectrum-Button--accent spectrum-Button--fill" id="invoke-close">
+          <span class="spectrum-Button-label">Close</span>
+        </button>
       </div>
     </div>`;
   root.querySelector('#invoke-close').addEventListener('click', onClose);
