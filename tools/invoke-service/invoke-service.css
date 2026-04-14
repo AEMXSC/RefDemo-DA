@@ -1,4 +1,4 @@
-/* Invoke External Service – DA Library Plugin */
+/* Invoke External Service – DA Library Plugin (Spectrum CSS) */
 
 body {
   margin: 0;
@@ -6,25 +6,20 @@ body {
     Roboto, sans-serif;
 }
 
-sp-theme {
-  display: block;
-  height: 100vh;
-}
-
 #invoke-service-root {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  box-sizing: border-box;
+  min-height: 200px;
   padding: 16px 24px;
+  box-sizing: border-box;
 }
 
 .invoke-service-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   text-align: center;
   width: 100%;
 }
@@ -37,7 +32,7 @@ sp-theme {
 
 .invoke-service-actions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   justify-content: center;
 }
 
@@ -56,17 +51,8 @@ sp-theme {
   gap: 8px;
 }
 
-.invoke-service-icon {
-  width: 24px;
-  height: 24px;
-}
-
-.invoke-service-icon.success {
-  color: var(--spectrum-global-color-green-600, #12805c);
-}
-
-.invoke-service-icon.failure {
-  color: var(--spectrum-global-color-red-600, #d7373f);
+.invoke-service-icon svg {
+  display: block;
 }
 
 .invoke-service-label {
@@ -80,4 +66,5 @@ sp-theme {
   margin: 0;
   font-size: 13px;
   color: var(--spectrum-global-color-gray-700, #6e6e6e);
+  max-width: 280px;
 }
