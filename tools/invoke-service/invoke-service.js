@@ -133,7 +133,10 @@ async function invokeExternalService(token, context) {
 
   const resp = await fetch(resolvedUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify(resolvedPayload),
   });
 
