@@ -1,8 +1,6 @@
 // eslint-disable-next-line import/no-unresolved
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
 
-const DEFAULT_SERVICE_URL = 'https://hook.app.workfrontfusion.com/xot9mamgl12su5dteagfw64f6lklf7ge';
-
 /* ── SVG icons (inline to avoid external deps) ───────────────────────── */
 
 const ICON_SUCCESS = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="none">
@@ -101,12 +99,17 @@ async function invokeExternalService(token, context) {
     fetchUserProfile(token),
     fetchPlaceholders(org, repo).catch((err) => {
       // eslint-disable-next-line no-console
-      console.warn('[invoke-service] Placeholders fetch failed, using defaults:', err);
+      console.warn('[invoke-service] Placeholders fetch failed:', err);
       return { externalServiceUrl: '', externalServicePayload: '' };
     }),
   ]);
 
-  const resolvedUrl = config.externalServiceUrl || DEFAULT_SERVICE_URL;
+  const resolvedUrl = config.externalServiceUrl;
+  if (!resolvedUrl) {
+    throw new Error(
+      'External service URL is not configured. Add an "external-service-url" entry to /config/placeholder.json.',
+    );
+  }
 
   let resolvedPayload;
   if (config.externalServicePayload) {
@@ -210,32 +213,44 @@ function renderResult(root, { isSuccess, message, onClose }) {
   root.querySelector('#invoke-close').addEventListener('click', onClose);
 }
 
+/* ── Helpers ──────────────────────────────────────────────────────────── */
+
+function isAdobeUser(email) {
+  return typeof email === 'string' && email.toLowerCase().endsWith('@adobe.com');
+}
+
 /* ── Init ─────────────────────────────────────────────────────────────── */
 
 (async function init() {
   const { context, token, actions } = await DA_SDK;
   const root = document.getElementById('invoke-service-root');
 
-  const handlers = {
-    onCancel: () => actions.closeLibrary(),
-    onClose: () => actions.closeLibrary(),
-    onConfirm: async () => {
-      renderLoading(root);
-      let isSuccess = false;
-      let message = '';
-      try {
-        await invokeExternalService(token, context);
-        isSuccess = true;
-        message = 'The external service executed successfully.';
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('[invoke-service] Error:', err);
-        isSuccess = false;
-        message = err.message || 'An unexpected error occurred.';
-      }
-      renderResult(root, { isSuccess, message, onClose: handlers.onClose });
-    },
+  const profile = await fetchUserProfile(token);
+  const adobeUser = isAdobeUser(profile.userEmail);
+
+  const run = async () => {
+    renderLoading(root);
+    let isSuccess = false;
+    let message = '';
+    try {
+      await invokeExternalService(token, context);
+      isSuccess = true;
+      message = 'The external service executed successfully.';
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[invoke-service] Error:', err);
+      isSuccess = false;
+      message = err.message || 'An unexpected error occurred.';
+    }
+    renderResult(root, { isSuccess, message, onClose: () => actions.closeLibrary() });
   };
 
-  renderConfirm(root, handlers);
+  if (adobeUser) {
+    renderConfirm(root, {
+      onCancel: () => actions.closeLibrary(),
+      onConfirm: run,
+    });
+  } else {
+    run();
+  }
 }());
