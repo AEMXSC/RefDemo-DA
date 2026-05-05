@@ -210,32 +210,44 @@ function renderResult(root, { isSuccess, message, onClose }) {
   root.querySelector('#invoke-close').addEventListener('click', onClose);
 }
 
+/* ── Helpers ──────────────────────────────────────────────────────────── */
+
+function isAdobeUser(email) {
+  return typeof email === 'string' && email.toLowerCase().endsWith('@adobe.com');
+}
+
 /* ── Init ─────────────────────────────────────────────────────────────── */
 
 (async function init() {
   const { context, token, actions } = await DA_SDK;
   const root = document.getElementById('invoke-service-root');
 
-  const handlers = {
-    onCancel: () => actions.closeLibrary(),
-    onClose: () => actions.closeLibrary(),
-    onConfirm: async () => {
-      renderLoading(root);
-      let isSuccess = false;
-      let message = '';
-      try {
-        await invokeExternalService(token, context);
-        isSuccess = true;
-        message = 'The external service executed successfully.';
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('[invoke-service] Error:', err);
-        isSuccess = false;
-        message = err.message || 'An unexpected error occurred.';
-      }
-      renderResult(root, { isSuccess, message, onClose: handlers.onClose });
-    },
+  const profile = await fetchUserProfile(token);
+  const adobeUser = isAdobeUser(profile.userEmail);
+
+  const run = async () => {
+    renderLoading(root);
+    let isSuccess = false;
+    let message = '';
+    try {
+      await invokeExternalService(token, context);
+      isSuccess = true;
+      message = 'The external service executed successfully.';
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[invoke-service] Error:', err);
+      isSuccess = false;
+      message = err.message || 'An unexpected error occurred.';
+    }
+    renderResult(root, { isSuccess, message, onClose: () => actions.closeLibrary() });
   };
 
-  renderConfirm(root, handlers);
+  if (adobeUser) {
+    renderConfirm(root, {
+      onCancel: () => actions.closeLibrary(),
+      onConfirm: run,
+    });
+  } else {
+    run();
+  }
 }());
