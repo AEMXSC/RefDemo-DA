@@ -213,6 +213,23 @@ function renderResult(root, { isSuccess, message, onClose }) {
   root.querySelector('#invoke-close').addEventListener('click', onClose);
 }
 
+function renderNoAccess(root, { onClose }) {
+  root.innerHTML = `
+    <div class="invoke-service-panel">
+      <div class="invoke-service-result">
+        <div class="invoke-service-icon">${ICON_FAILURE}</div>
+        <p class="invoke-service-label">Access denied</p>
+        <p class="invoke-service-detail">You do not have permission to run this extension. Please contact an Adobe administrator if you believe this is a mistake.</p>
+      </div>
+      <div class="invoke-service-actions">
+        <button class="spectrum-Button spectrum-Button--sizeM spectrum-Button--accent spectrum-Button--fill" id="invoke-close">
+          <span class="spectrum-Button-label">Close</span>
+        </button>
+      </div>
+    </div>`;
+  root.querySelector('#invoke-close').addEventListener('click', onClose);
+}
+
 /* ── Helpers ──────────────────────────────────────────────────────────── */
 
 function isAdobeUser(email) {
@@ -251,6 +268,6 @@ function isAdobeUser(email) {
       onConfirm: run,
     });
   } else {
-    run();
+    renderNoAccess(root, { onClose: () => actions.closeLibrary() });
   }
 }());
