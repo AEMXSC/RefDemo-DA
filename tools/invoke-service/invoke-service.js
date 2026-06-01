@@ -85,6 +85,11 @@ function resolveOrgRepo(context) {
   throw new Error(`Could not resolve org/repo from context: ${JSON.stringify(context)}`);
 }
 
+function buildAemPageUrl(org, repo, path) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `https://main--${repo}--${org}.aem.live${normalizedPath}`;
+}
+
 /* ── External service call ───────────────────────────────────────────── */
 
 async function invokeExternalService(token, context) {
@@ -130,6 +135,8 @@ async function invokeExternalService(token, context) {
       'user-email': profile.userEmail,
     };
   }
+
+  resolvedPayload.aemPageUrl = buildAemPageUrl(org, repo, path);
 
   // eslint-disable-next-line no-console
   console.log('[invoke-service] Calling service →', resolvedUrl);
