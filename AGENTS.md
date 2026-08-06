@@ -31,6 +31,11 @@ The repository provides the basic structure, blocks, and configuration needed to
     └── {blockname}/   - Individual block directory
         ├── {blockname}.js      # Block's JavaScript
         └── {blockname}.css     # Block's styles
+├── tools/          # Plugins/Extensions/Applications code for DA and document based authoring of AEM EDS
+    └── {toolname}/   - Individual Tool's directory
+        ├── {toolname}.js      # Tool's JavaScript
+        └── {toolname}.css     # Tool's styles
+        └── {toolname}.html     # Tool's UI html
 ├── styles/          # Global styles and CSS
     ├── styles.css          # Minimal global styling and layout for your website required for LCP
     ├── lazy-styles.css     # Additional global styling and layout for below the fold/post LCP content
@@ -104,6 +109,38 @@ export default async function decorate(block) {
 Use `curl` and `console.log` to inspect the HTML delivered by the backend and the DOM nodes to be decorated before making assumptions. Remember that authors may omit or add fields to a block, so your code must handle this gracefully.
 
 Each block should be self-contained and re-useable, with CSS and JS files following the naming convention: `blockname.css`, `blockname.js`. Blocks should be responsive and accessible by default.
+
+### Tools
+
+In Adobe Experience Manager (AEM) Edge Delivery Services (EDS) Document Authoring (DA) (da.live), plugins are lightweight, page-level micro-frontend UI helpers embedded directly into the authoring interface, while applications are full-screen, iframe-based tools built for complex, multi-page, or sitewide workflows.
+
+Plugins in DA : Plugins act as fast, inline enhancements inside the document or sheet editing environment.
+Scope: Single-page or field-level modifications.
+Performance: Extremely lightweight and fast loading.
+Use Cases: Inline tag selectors, custom date pickers, asset pickers, or simple text formatting helpers.
+
+Applications in DA : Applications are robust, immersive full-screen environments loaded via iframes to handle large-scale tasks.
+Scope: Sitewide, multi-page, or long-running processes.
+Risk Management: Ideal for high-risk or heavy actions that impact multiple files simultaneously.
+Use Cases: Global search-and-replace tools, bulk validation dashboards, reporting utilities, or complex publishing workflows.
+
+The tool's javascript should have a function which is called to perform the tool's function:
+
+```
+/**
+ * This method is an IIFE (Immediately Invoked Function Expression) named init — it defines an async function and runs it right away via the trailing ().Its job: bootstrap the plugin — the entry point that mounts the Lit component into the DA authoring UI.
+*/
+(async function init() {
+  const { context, token } = await DA_SDK;
+  const { org, repo, path } = context;
+
+  const cmp = document.createElement('<element-name>');
+  cmp.path = `/${org}/${repo}${path}`;
+  cmp.token = token;
+
+  document.body.append(cmp);
+}());
+```
 
 ### Auto-Blocking
 
