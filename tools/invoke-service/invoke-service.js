@@ -104,9 +104,8 @@ async function fetchWorkfrontUserId(instance, email, token) {
 const WORKFRONT_TASK_FIELDS = [
   'ID', 'name', 'status', 'percentComplete', 'priority', 'priorityColor', 'condition',
   'plannedStartDate', 'plannedCompletionDate', 'commitDate', 'canStart', 'isReady',
-  'isStatusComplete', 'hasDocuments', 'hasNotes', 'hasMessages', 'numberOfChildren',
-  'taskNumber', 'workRequired', 'actualWorkRequiredDouble', 'URL',
-  'project:name', 'assignedTo:name', 'assignedToID', 'objCode',
+  'isStatusComplete', 'hasDocuments', 'hasNotes', 'hasMessages',
+  'taskNumber', 'URL', 'project:name', 'assignedTo:name', 'assignedToID', 'objCode',
 ].join(',');
 
 async function fetchWorkfrontTasks(url, assignedToId, token) {
