@@ -108,6 +108,15 @@ const WORKFRONT_TASK_FIELDS = [
   'taskNumber', 'URL', 'project:name', 'assignedTo:name', 'assignedToID', 'objCode',
 ].join(',');
 
+// Workfront dates look like "2026-08-07T09:00:00:000-0700" — show just the date part.
+function formatTaskDate(value) {
+  if (!value) return '';
+  const iso = String(value).slice(0, 10);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 async function fetchWorkfrontTasks(url, assignedToId, token) {
   const target = new URL(AIO_WF_ACTION_ENDPOINT);
   target.searchParams.set('url', url);
@@ -297,6 +306,7 @@ class RefDemoInvokeService extends LitElement {
     _tasks: { state: true },
     _tasksError: { state: true },
     _busyTaskId: { state: true },
+    _taskQuery: { state: true },
   };
 
   constructor() {
@@ -305,6 +315,17 @@ class RefDemoInvokeService extends LitElement {
     this._view = 'confirm';
     this._tasksState = 'idle';
     this._tasks = [];
+    this._taskQuery = '';
+  }
+
+  get filteredTasks() {
+    const q = (this._taskQuery || '').trim().toLowerCase();
+    if (!q) return this._tasks;
+    return this._tasks.filter((t) => {
+      const name = (t.name || '').toLowerCase();
+      const project = (t.project?.name || '').toLowerCase();
+      return name.includes(q) || project.includes(q);
+    });
   }
 
   connectedCallback() {
@@ -452,17 +473,23 @@ class RefDemoInvokeService extends LitElement {
   renderTask(task) {
     const actions = actionsForStatus(task.status);
     const busy = this._busyTaskId === task.id;
+    const project = task.project?.name;
+    const due = formatTaskDate(task.plannedCompletionDate || task.commitDate);
     return html`
       <li class="task">
         <div class="task-info">
-          <p class="task-name">${task.name}</p>
+          <p class="task-name" title=${task.name}>${task.name}</p>
+          <div class="task-meta">
+            ${project ? html`<span class="task-project" title=${project}>${project}</span>` : nothing}
+            ${due ? html`<span class="task-due">Due ${due}</span>` : nothing}
+          </div>
           <span class="task-status status-${(task.status || '').toLowerCase()}">${task.statusLabel || task.status || '—'}</span>
         </div>
         <div class="task-actions">
           ${busy
     ? html`<div class="spinner" aria-hidden="true"></div>`
     : actions.map((a) => html`
-              <sl-button class=${a.variant || ''} @click=${() => this.runTaskAction(task, a)}>${a.label}</sl-button>`)}
+              <button class="mini-btn ${a.variant || ''}" @click=${() => this.runTaskAction(task, a)}>${a.label}</button>`)}
         </div>
       </li>`;
   }
@@ -488,11 +515,24 @@ class RefDemoInvokeService extends LitElement {
               <sl-button @click=${this.loadTasks}>Retry</sl-button>
             </div>
           </div>`;
-      case 'loaded':
+      case 'loaded': {
         if (!this._tasks.length) {
           return html`<div class="invoke-service-panel"><p class="invoke-service-message">No tasks assigned to you.</p></div>`;
         }
-        return html`<ul class="task-list">${this._tasks.map((t) => this.renderTask(t))}</ul>`;
+        const tasks = this.filteredTasks;
+        return html`
+          <div class="tasks-view">
+            <input
+              class="task-search"
+              type="search"
+              placeholder="Search tasks…"
+              .value=${this._taskQuery}
+              @input=${(e) => { this._taskQuery = e.target.value; }} />
+            ${tasks.length
+    ? html`<ul class="task-list">${tasks.map((t) => this.renderTask(t))}</ul>`
+    : html`<p class="invoke-service-message">No tasks match “${this._taskQuery}”.</p>`}
+          </div>`;
+      }
       default:
         return nothing;
     }
