@@ -115,8 +115,7 @@ const WORKFRONT_TASK_FIELDS = [
   'ID', 'name', 'status', 'percentComplete', 'priority', 'priorityColor', 'condition',
   'plannedStartDate', 'plannedCompletionDate', 'commitDate', 'canStart', 'isReady',
   'isStatusComplete', 'hasDocuments', 'hasNotes', 'hasMessages',
-  'workRequired', 'actualWorkRequiredDouble',
-  'taskNumber', 'URL', 'project:name', 'assignedTo:name', 'assignedToID', 'objCode',
+  'workRequired', 'taskNumber', 'URL', 'project:name', 'assignedTo:name', 'assignedToID', 'objCode',
 ].join(',');
 
 // Workfront dates look like "2026-08-07T09:00:00:000-0700" — show just the date part.
