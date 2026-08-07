@@ -25,6 +25,16 @@ const iconFailure = () => html`
     <path d="M8 8l8 8M16 8l-8 8" stroke="#fff" stroke-width="2" stroke-linecap="round"></path>
   </svg>`;
 
+/* Small action icons (16px, currentColor) */
+const SVG = (paths) => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const ACTION_ICONS = {
+  play: () => SVG(html`<path d="M6 4l14 8-14 8z" fill="currentColor" stroke="none"></path>`),
+  check: () => SVG(html`<path d="M5 12.5l4.5 4.5L19 7"></path>`),
+  close: () => SVG(html`<path d="M6 6l12 12M18 6L6 18"></path>`),
+  external: () => SVG(html`<path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path>`),
+  clock: () => SVG(html`<circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path>`),
+};
+
 /* ── Placeholders config ─────────────────────────────────────────────── */
 
 function buildPlaceholdersUrl(org, repo) {
@@ -105,6 +115,7 @@ const WORKFRONT_TASK_FIELDS = [
   'ID', 'name', 'status', 'percentComplete', 'priority', 'priorityColor', 'condition',
   'plannedStartDate', 'plannedCompletionDate', 'commitDate', 'canStart', 'isReady',
   'isStatusComplete', 'hasDocuments', 'hasNotes', 'hasMessages',
+  'workRequired', 'actualWorkRequiredDouble',
   'taskNumber', 'URL', 'project:name', 'assignedTo:name', 'assignedToID', 'objCode',
 ].join(',');
 
@@ -271,13 +282,13 @@ async function invokeExternalService(token, context) {
 // Which actions are offered per Workfront status code.
 const STATUS_ACTIONS = {
   NEW: [
-    { key: 'INP', label: 'Start' },
-    { key: 'CPL', label: 'Complete' },
-    { key: 'REJ', label: 'Reject', variant: 'secondary' },
+    { key: 'INP', label: 'Start', icon: 'play' },
+    { key: 'CPL', label: 'Complete', icon: 'check' },
+    { key: 'REJ', label: 'Reject', icon: 'close', variant: 'secondary' },
   ],
   INP: [
-    { key: 'CPL', label: 'Complete' },
-    { key: 'REJ', label: 'Reject', variant: 'secondary' },
+    { key: 'CPL', label: 'Complete', icon: 'check' },
+    { key: 'REJ', label: 'Reject', icon: 'close', variant: 'secondary' },
   ],
   CPL: [],
   REJ: [],
@@ -285,7 +296,27 @@ const STATUS_ACTIONS = {
 
 function actionsForStatus(status) {
   return STATUS_ACTIONS[(status || '').toUpperCase()]
-    || [{ key: 'CPL', label: 'Complete' }, { key: 'REJ', label: 'Reject', variant: 'secondary' }];
+    || [{ key: 'CPL', label: 'Complete', icon: 'check' }, { key: 'REJ', label: 'Reject', icon: 'close', variant: 'secondary' }];
+}
+
+// True when the task is past its due date and not yet complete.
+function isTaskOverdue(task) {
+  const raw = task.plannedCompletionDate || task.commitDate;
+  if (!raw || task.status === 'CPL') return false;
+  const due = new Date(String(raw).slice(0, 10));
+  if (Number.isNaN(due.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return due < today;
+}
+
+// "40% · 6/16h" style progress label (hours derived from workRequired minutes).
+function taskProgressLabel(task) {
+  const pct = Math.round(task.percentComplete || 0);
+  const plannedH = task.workRequired ? Math.round(task.workRequired / 60) : 0;
+  if (!plannedH) return `${pct}%`;
+  const doneH = Math.round(plannedH * (pct / 100));
+  return `${pct}% · ${doneH}/${plannedH}h`;
 }
 
 /* ── Lit component ───────────────────────────────────────────────────── */
@@ -326,6 +357,27 @@ class RefDemoInvokeService extends LitElement {
       const project = (t.project?.name || '').toLowerCase();
       return name.includes(q) || project.includes(q);
     });
+  }
+
+  get taskStats() {
+    const inProgress = this._tasks.filter((t) => t.status === 'INP').length;
+    const dueThisWeek = this._tasks.filter((t) => {
+      const raw = t.plannedCompletionDate || t.commitDate;
+      if (!raw || t.status === 'CPL') return false;
+      const due = new Date(String(raw).slice(0, 10));
+      if (Number.isNaN(due.getTime())) return false;
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 7);
+      return due >= start && due <= end;
+    }).length;
+    return { total: this._tasks.length, inProgress, dueThisWeek };
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  openTask(task) {
+    if (task.URL) window.open(task.URL, '_blank', 'noopener');
   }
 
   connectedCallback() {
@@ -475,21 +527,39 @@ class RefDemoInvokeService extends LitElement {
     const busy = this._busyTaskId === task.id;
     const project = task.project?.name;
     const due = formatTaskDate(task.plannedCompletionDate || task.commitDate);
+    const overdue = isTaskOverdue(task);
+    const pct = Math.round(task.percentComplete || 0);
+    const statusClass = (task.status || '').toLowerCase();
     return html`
       <li class="task">
-        <div class="task-info">
+        <div class="task-head">
           <p class="task-name" title=${task.name}>${task.name}</p>
-          <div class="task-meta">
-            ${project ? html`<span class="task-project" title=${project}>${project}</span>` : nothing}
-            ${due ? html`<span class="task-due">Due ${due}</span>` : nothing}
-          </div>
-          <span class="task-status status-${(task.status || '').toLowerCase()}">${task.statusLabel || task.status || '—'}</span>
-        </div>
-        <div class="task-actions">
-          ${busy
+          <div class="task-actions">
+            ${busy
     ? html`<div class="spinner" aria-hidden="true"></div>`
-    : actions.map((a) => html`
-              <button class="mini-btn ${a.variant || ''}" @click=${() => this.runTaskAction(task, a)}>${a.label}</button>`)}
+    : html`
+              ${actions.map((a) => html`
+                <button
+                  class="icon-btn ${a.variant || 'primary'}"
+                  title=${a.label}
+                  aria-label=${a.label}
+                  @click=${() => this.runTaskAction(task, a)}>${ACTION_ICONS[a.icon]()}</button>`)}
+              ${task.URL ? html`
+                <button class="icon-btn" title="Open in Workfront" aria-label="Open in Workfront" @click=${() => this.openTask(task)}>${ACTION_ICONS.external()}</button>` : nothing}`}
+          </div>
+        </div>
+        <div class="task-sub">
+          ${project ? html`<span class="task-project" title=${project}>${project}</span><span class="dot">·</span>` : nothing}
+          <span class="task-status status-${statusClass}">${task.statusLabel || task.status || '—'}</span>
+        </div>
+        <div class="task-foot">
+          <div class="task-progress">
+            <div class="progress-track">
+              <div class="progress-fill ${pct >= 100 ? 'complete' : ''}" style="width:${pct}%"></div>
+            </div>
+            <span class="progress-label">${taskProgressLabel(task)}</span>
+          </div>
+          ${due ? html`<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? ACTION_ICONS.clock() : nothing}${due}</span>` : nothing}
         </div>
       </li>`;
   }
@@ -520,8 +590,14 @@ class RefDemoInvokeService extends LitElement {
           return html`<div class="invoke-service-panel"><p class="invoke-service-message">No tasks assigned to you.</p></div>`;
         }
         const tasks = this.filteredTasks;
+        const stats = this.taskStats;
         return html`
           <div class="tasks-view">
+            <div class="task-stats">
+              <div class="stat"><span class="stat-label">Assigned to you</span><span class="stat-value">${stats.total}</span></div>
+              <div class="stat"><span class="stat-label">In progress</span><span class="stat-value">${stats.inProgress}</span></div>
+              <div class="stat"><span class="stat-label">Due this week</span><span class="stat-value">${stats.dueThisWeek}</span></div>
+            </div>
             <input
               class="task-search"
               type="search"

@@ -155,40 +155,73 @@
   gap: 6px;
 }
 
-.task {
+/* Summary stats header */
+.task-stats {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 1px solid var(--spectrum-global-color-gray-300, #d3d3d3);
-  border-radius: 6px;
+  gap: 8px;
 }
 
-.task-info {
+.stat {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  text-align: left;
-  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--spectrum-global-color-gray-200, #e6e6e6);
+  border-radius: 6px;
+  background: var(--spectrum-global-color-gray-75, #fafafa);
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--spectrum-global-color-gray-600, #808080);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--spectrum-global-color-gray-900, #323232);
+}
+
+/* Task card */
+.task {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--spectrum-global-color-gray-300, #d3d3d3);
+  border-radius: 8px;
+}
+
+.task-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .task-name {
   margin: 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--spectrum-global-color-gray-900, #323232);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
-.task-meta {
+.task-sub {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2px 10px;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   color: var(--spectrum-global-color-gray-600, #808080);
+  min-width: 0;
 }
 
 .task-project {
@@ -198,13 +231,12 @@
   max-width: 160px;
 }
 
-.task-due {
-  white-space: nowrap;
+.task-sub .dot {
+  color: var(--spectrum-global-color-gray-400, #b3b3b3);
 }
 
 .task-status {
-  align-self: flex-start;
-  margin-top: 2px;
+  flex-shrink: 0;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -235,34 +267,93 @@
   color: #d7373f;
 }
 
-.task-actions {
+/* Progress + due footer */
+.task-foot {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.mini-btn {
-  appearance: none;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid var(--spectrum-global-color-blue-600, #1473e6);
+.task-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.progress-track {
+  width: 100%;
+  max-width: 160px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--spectrum-global-color-gray-200, #e6e6e6);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
   background: var(--spectrum-global-color-blue-600, #1473e6);
-  color: #fff;
-  cursor: pointer;
+}
+
+.progress-fill.complete {
+  background: #12805c;
+}
+
+.progress-label {
+  font-size: 11px;
+  color: var(--spectrum-global-color-gray-600, #808080);
+}
+
+.task-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--spectrum-global-color-gray-700, #6e6e6e);
   white-space: nowrap;
 }
 
-.mini-btn:hover {
-  filter: brightness(0.95);
+.task-due.overdue {
+  color: #d7373f;
+  font-weight: 600;
 }
 
-.mini-btn.secondary {
+/* Icon action buttons */
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--spectrum-global-color-gray-300, #d3d3d3);
   background: #fff;
   color: var(--spectrum-global-color-gray-800, #4b4b4b);
-  border-color: var(--spectrum-global-color-gray-400, #b3b3b3);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--spectrum-global-color-gray-100, #f5f5f5);
+}
+
+.icon-btn.primary {
+  border-color: var(--spectrum-global-color-blue-600, #1473e6);
+  color: var(--spectrum-global-color-blue-600, #1473e6);
+}
+
+.icon-btn.secondary {
+  color: #d7373f;
+  border-color: #f3c9cb;
 }
