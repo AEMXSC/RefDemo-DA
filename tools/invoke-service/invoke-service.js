@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
 // eslint-disable-next-line import/no-unresolved
-import { LitElement, html, nothing } from 'https://da.live/deps/lit/dist/index.js';
+import { LitElement, html, nothing } from 'da-lit';
 
 // Super Lite components (sl-button, etc.)
 import 'https://da.live/nx/public/sl/components.js';
@@ -24,20 +24,6 @@ const iconFailure = () => html`
     <circle cx="12" cy="12" r="11" fill="#d7373f"></circle>
     <path d="M8 8l8 8M16 8l-8 8" stroke="#fff" stroke-width="2" stroke-linecap="round"></path>
   </svg>`;
-
-/* Small action icons (15px). Each icon is ONE self-contained <svg> template —
-   the inner <path> nodes must live in the SAME html`` as the <svg> so they are
-   parsed in the SVG namespace. A separate html`` path fragment renders as an
-   inert HTMLUnknownElement and shows nothing. */
-const ACTION_ICONS = {
-  play: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l14 8-14 8z" fill="currentColor" stroke="none"></path></svg>`,
-  check: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>`,
-  close: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>`,
-  external: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>`,
-  clock: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>`,
-  refresh: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v5h-5"></path></svg>`,
-  info: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg>`,
-};
 
 /* ── Placeholders config ─────────────────────────────────────────────── */
 
@@ -77,9 +63,8 @@ async function fetchPlaceholders(org, repo) {
 const WORKFRONT_API_VERSION = 'v19.0';
 const WORKFRONT_API_BASE = `/attask/api/${WORKFRONT_API_VERSION}`;
 const WORKFRONT_USER_PATH = `${WORKFRONT_API_BASE}/user/search`;
-const WORKFRONT_TASKS_SEARCH_PATH = `${WORKFRONT_API_BASE}/task/search`;
+const WORKFRONT_TASKS_PATH = `${WORKFRONT_API_BASE}/task/search`;
 const WORKFRONT_TASK_ACTION_PATH = `${WORKFRONT_API_BASE}/task`;
-const AIO_WF_ACTION_ENDPOINT = 'https://675172-referencedemopartner-stage.adobeioruntime.net/api/v1/web/ref-demo-api-gateway/wf-actions';
 
 // Workfront endpoints derived from a single "workfront-instance-url"
 // (e.g. https://aemshowcase2.my.workfront.com). URLs are only built when it is set.
@@ -89,18 +74,16 @@ async function fetchWorkfrontConfig(org, repo) {
   if (!instance) return { instance: '', tasksUrl: '', actionUrl: '' };
   return {
     instance,
-    tasksUrl: `${instance}${WORKFRONT_TASKS_SEARCH_PATH}`,
+    tasksUrl: `${instance}${WORKFRONT_TASKS_PATH}`,
     actionUrl: `${instance}${WORKFRONT_TASK_ACTION_PATH}`,
   };
 }
 
 // Resolve a Workfront user ID from an email address.
 async function fetchWorkfrontUserId(instance, email, token) {
-  const target = new URL(AIO_WF_ACTION_ENDPOINT);
-  target.searchParams.set('url', `${instance}${WORKFRONT_USER_PATH}`);
+  const target = new URL(`${instance}${WORKFRONT_USER_PATH}`);
   target.searchParams.set('emailAddr', email);
   target.searchParams.set('fields', 'ID,name');
-  target.searchParams.set('method', 'GET');
 
   const resp = await fetch(target.toString(), {
     headers: { Authorization: `Bearer ${token}` },
@@ -118,49 +101,13 @@ async function fetchWorkfrontUserId(instance, email, token) {
 const WORKFRONT_TASK_FIELDS = [
   'ID', 'name', 'status', 'percentComplete', 'priority', 'priorityColor', 'condition',
   'plannedStartDate', 'plannedCompletionDate', 'commitDate', 'canStart', 'isReady',
-  'isStatusComplete', 'hasDocuments', 'hasNotes', 'hasMessages',
-  'workRequired', 'taskNumber', 'URL', 'project:name', 'assignedTo:name', 'assignedToID', 'objCode',
+  'isStatusComplete', 'hasDocuments', 'hasNotes', 'hasMessages', 'numberOfChildren',
+  'taskNumber', 'workRequired', 'actualWorkRequiredDouble', 'URL',
+  'project:name', 'assignedTo:name', 'assignedToID', 'objCode',
 ].join(',');
 
-// Workfront dates look like "2026-08-07T09:00:00:000-0700" — show just the date part.
-function formatTaskDate(value) {
-  if (!value) return '';
-  const iso = String(value).slice(0, 10);
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function parseTaskDateToMs(value) {
-  if (!value) return 0;
-  const ms = Date.parse(String(value).slice(0, 10));
-  return Number.isNaN(ms) ? 0 : ms;
-}
-
-function getTaskSortDateMs(task) {
-  return parseTaskDateToMs(task.plannedStartDate)
-    || parseTaskDateToMs(task.plannedCompletionDate)
-    || parseTaskDateToMs(task.commitDate);
-}
-
-function toNumberOrZero(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function getStatusSortRank(status) {
-  const s = (status || '').toUpperCase();
-  if (s === 'NEW') return 0;
-  if (s === 'INP') return 1;
-  if (s === 'CPL') return 3;
-  if (s === 'REJ') return 4;
-  return 2;
-}
-
 async function fetchWorkfrontTasks(url, assignedToId, token) {
-  const target = new URL(AIO_WF_ACTION_ENDPOINT);
-  target.searchParams.set('url', url);
-  target.searchParams.set('method', 'GET');
+  const target = new URL(url);
   target.searchParams.set('fields', WORKFRONT_TASK_FIELDS);
   if (assignedToId) target.searchParams.set('assignedToID', assignedToId);
 
@@ -171,44 +118,19 @@ async function fetchWorkfrontTasks(url, assignedToId, token) {
 
   const json = await resp.json();
   const rows = json.data || [];
-  const tasks = rows.map((row) => ({
+  return rows.map((row) => ({
     ...row,
     id: row.ID,
     status: (row.status || '').toUpperCase(),
     statusLabel: row.status || '',
   }));
-
-  tasks.sort((a, b) => {
-    const byDate = getTaskSortDateMs(b) - getTaskSortDateMs(a);
-    if (byDate !== 0) return byDate;
-    const byStatus = getStatusSortRank(a.status) - getStatusSortRank(b.status);
-    if (byStatus !== 0) return byStatus;
-    return toNumberOrZero(b.taskNumber) - toNumberOrZero(a.taskNumber);
-  });
-
-  return tasks;
 }
 
-async function updateWorkfrontTask(url, task, action, token) {
-  // Route through the AIO gateway (same as fetchWorkfrontTasks) to avoid CORS.
-  const target = new URL(AIO_WF_ACTION_ENDPOINT);
-  target.searchParams.set('method', 'PUT');
-
-  if (action.wfAction) {
-    // Workfront "work action" (e.g. acceptWork = "Work On It"). This is what the
-    // native UI sends — a plain status write is a no-op for a NEW assigned task.
-    target.searchParams.set('url', url);
-    target.searchParams.set('action', action.wfAction);
-    target.searchParams.set('id', task.id);
-  } else {
-    // Fallback: direct status write (used until the work-action name is known).
-    target.searchParams.set('url', `${url}/${task.id}`);
-    target.searchParams.set('status', action.key);
-  }
-
-  const resp = await fetch(target.toString(), {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${token}` },
+async function updateWorkfrontTask(url, taskId, actionKey) {
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ taskId, action: actionKey }),
   });
   if (!resp.ok) {
     const body = await resp.text();
@@ -263,24 +185,12 @@ function resolveOrgRepo(context) {
 
 function buildAemPageUrl(org, repo, path) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `https://main--${repo}--${org}.aem.page${normalizedPath}`;
+  return `https://main--${repo}--${org}.aem.live${normalizedPath}`;
 }
-
-const REVIEW_PROGRESS_SEQUENCE = [
-  'Fetching page details…',
-  'Collecting user details…',
-  'Creating project in Workfront…',
-  'Creating review task…',
-  'Assigning it to the user…',
-  'Nearly completed…',
-];
-
-const REVIEW_SLOW_HINT = 'About to finish... just a few more seconds...';
 
 /* ── External service call ───────────────────────────────────────────── */
 
-async function invokeExternalService(token, context, onProgress = () => {}) {
-  onProgress('Fetching page details…');
+async function invokeExternalService(token, context) {
   // eslint-disable-next-line no-console
   console.log('[invoke-service] DA SDK context →', JSON.stringify(context, null, 2));
 
@@ -288,7 +198,6 @@ async function invokeExternalService(token, context, onProgress = () => {}) {
   // eslint-disable-next-line no-console
   console.log('[invoke-service] Resolved →', { org, repo, path });
 
-  onProgress('Collecting user details…');
   const [profile, config] = await Promise.all([
     fetchUserProfile(token),
     fetchPlaceholders(org, repo).catch((err) => {
@@ -327,7 +236,6 @@ async function invokeExternalService(token, context, onProgress = () => {}) {
 
   resolvedPayload.aemPageUrl = buildAemPageUrl(org, repo, path);
 
-  onProgress('Creating project in Workfront…');
   // eslint-disable-next-line no-console
   console.log('[invoke-service] Calling service →', resolvedUrl);
 
@@ -344,56 +252,27 @@ async function invokeExternalService(token, context, onProgress = () => {}) {
     throw new Error(`External service error: ${resp.status} – ${errorBody}`);
   }
 
-  onProgress('Creating review task…');
-  const result = await resp.json();
-  onProgress('Assigning it to you…');
-  onProgress('Nearly completed…');
-  return result;
+  return resp.json();
 }
 
-// Every task always shows the same set of action buttons; each one is disabled
-// when the transition is not valid from the task's current status (e.g. a task
-// already in progress shows Start disabled, a completed task shows Complete
-// disabled). Keeps the button layout stable across statuses.
-const TASK_ACTIONS = [
-  // wfAction = Workfront work-action verb (from the native "Work On It" call).
-  // Start is confirmed (acceptWork); Complete/Reject verbs are TBD — capture the
-  // "Mark as Done" / reject requests and fill them in to switch off the fallback.
-  { key: 'INP', label: 'Start', icon: 'play', wfAction: 'acceptWork' },
-  { key: 'CPL', label: 'Complete', icon: 'check' },
-  { key: 'REJ', label: 'Reject', icon: 'close', variant: 'secondary' },
-];
-
-// Statuses from which each action is still available. Anything else → disabled.
-const ACTION_ENABLED_FROM = {
-  INP: ['NEW'], // can only Start a NEW task
-  CPL: ['NEW', 'INP'], // can Complete while new or in progress
-  REJ: ['NEW', 'INP'], // can Reject while new or in progress
+// Which actions are offered per Workfront status code.
+const STATUS_ACTIONS = {
+  NEW: [
+    { key: 'INP', label: 'Start' },
+    { key: 'CPL', label: 'Complete' },
+    { key: 'REJ', label: 'Reject', variant: 'secondary' },
+  ],
+  INP: [
+    { key: 'CPL', label: 'Complete' },
+    { key: 'REJ', label: 'Reject', variant: 'secondary' },
+  ],
+  CPL: [],
+  REJ: [],
 };
 
-function isActionDisabled(status, actionKey) {
-  const from = ACTION_ENABLED_FROM[actionKey] || [];
-  return !from.includes((status || '').toUpperCase());
-}
-
-// True when the task is past its due date and not yet complete.
-function isTaskOverdue(task) {
-  const raw = task.plannedCompletionDate || task.commitDate;
-  if (!raw || task.status === 'CPL') return false;
-  const due = new Date(String(raw).slice(0, 10));
-  if (Number.isNaN(due.getTime())) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return due < today;
-}
-
-// "40% · 6/16h" style progress label (hours derived from workRequired minutes).
-function taskProgressLabel(task) {
-  const pct = Math.round(task.percentComplete || 0);
-  const plannedH = task.workRequired ? Math.round(task.workRequired / 60) : 0;
-  if (!plannedH) return `${pct}%`;
-  const doneH = Math.round(plannedH * (pct / 100));
-  return `${pct}% · ${doneH}/${plannedH}h`;
+function actionsForStatus(status) {
+  return STATUS_ACTIONS[(status || '').toUpperCase()]
+    || [{ key: 'CPL', label: 'Complete' }, { key: 'REJ', label: 'Reject', variant: 'secondary' }];
 }
 
 /* ── Lit component ───────────────────────────────────────────────────── */
@@ -409,155 +288,46 @@ class RefDemoInvokeService extends LitElement {
     _view: { state: true }, // 'confirm' | 'loading' | 'result'
     _isSuccess: { state: true },
     _message: { state: true },
-    _loadingMessage: { state: true },
-    _serviceUrl: { state: true },
     // Tasks tab
     _tasksState: { state: true }, // 'idle' | 'loading' | 'loaded' | 'error'
     _tasks: { state: true },
     _tasksError: { state: true },
     _busyTaskId: { state: true },
-    _taskQuery: { state: true },
   };
 
   constructor() {
     super();
-    this._tab = 'tasks';
+    this._tab = 'service';
     this._view = 'confirm';
-    this._loadingMessage = REVIEW_PROGRESS_SEQUENCE[0];
     this._tasksState = 'idle';
     this._tasks = [];
-    this._taskQuery = '';
-    this._progressIndex = 0;
-    this._progressTicker = null;
-    this._slowHintTimer = null;
-    this._slowHintShown = false;
-  }
-
-  setLoadingMessage(message) {
-    this._loadingMessage = message;
-  }
-
-  advanceProgressTo(index) {
-    const bounded = Math.max(0, Math.min(index, REVIEW_PROGRESS_SEQUENCE.length - 1));
-    if (bounded <= this._progressIndex) return;
-    this._progressIndex = bounded;
-    this.setLoadingMessage(REVIEW_PROGRESS_SEQUENCE[this._progressIndex]);
-  }
-
-  handleServiceProgress(message) {
-    const idx = REVIEW_PROGRESS_SEQUENCE.indexOf(message);
-    if (idx !== -1) this.advanceProgressTo(idx);
-  }
-
-  startProgressSequence() {
-    this.stopProgressSequence();
-    this._progressIndex = 0;
-    this._slowHintShown = false;
-    this.setLoadingMessage(REVIEW_PROGRESS_SEQUENCE[0]);
-
-    this._progressTicker = window.setInterval(() => {
-      if (this._view !== 'loading') return;
-      if (this._progressIndex < REVIEW_PROGRESS_SEQUENCE.length - 1) {
-        this.advanceProgressTo(this._progressIndex + 1);
-      }
-    }, 2000);
-
-    this._slowHintTimer = window.setTimeout(() => {
-      if (this._view !== 'loading') return;
-      if (this._progressIndex >= REVIEW_PROGRESS_SEQUENCE.length - 2 && !this._slowHintShown) {
-        this._slowHintShown = true;
-        this.setLoadingMessage(REVIEW_SLOW_HINT);
-      }
-    }, 12000);
-  }
-
-  stopProgressSequence() {
-    if (this._progressTicker) {
-      clearInterval(this._progressTicker);
-      this._progressTicker = null;
-    }
-    if (this._slowHintTimer) {
-      clearTimeout(this._slowHintTimer);
-      this._slowHintTimer = null;
-    }
-  }
-
-  get filteredTasks() {
-    const q = (this._taskQuery || '').trim().toLowerCase();
-    if (!q) return this._tasks;
-    return this._tasks.filter((t) => {
-      const name = (t.name || '').toLowerCase();
-      const project = (t.project?.name || '').toLowerCase();
-      return name.includes(q) || project.includes(q);
-    });
-  }
-
-  get taskStats() {
-    const inProgress = this._tasks.filter((t) => t.status === 'INP').length;
-    const dueThisWeek = this._tasks.filter((t) => {
-      const raw = t.plannedCompletionDate || t.commitDate;
-      if (!raw || t.status === 'CPL') return false;
-      const due = new Date(String(raw).slice(0, 10));
-      if (Number.isNaN(due.getTime())) return false;
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(end.getDate() + 7);
-      return due >= start && due <= end;
-    }).length;
-    return { total: this._tasks.length, inProgress, dueThisWeek };
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  openTask(task) {
-    if (task.URL) window.open(task.URL, '_blank', 'noopener');
   }
 
   connectedCallback() {
     super.connectedCallback();
     this.shadowRoot.adoptedStyleSheets = [styles];
     this.gateUser();
-    this.loadServiceUrl();
   }
 
   async gateUser() {
     const profile = await fetchUserProfile(this.token);
     this._allowed = typeof profile.userEmail === 'string'
       && profile.userEmail.toLowerCase().endsWith('@adobe.com');
-    // Tasks is the default tab — kick off its load once access is granted.
-    if (this._allowed && this._tab === 'tasks' && this._tasksState === 'idle') {
-      this.loadTasks();
-    }
-  }
-
-  async loadServiceUrl() {
-    try {
-      const { org, repo } = resolveOrgRepo(this.context);
-      const cfg = await fetchPlaceholders(org, repo);
-      this._serviceUrl = cfg.externalServiceUrl;
-    } catch (e) {
-      this._serviceUrl = '';
-    }
   }
 
   /* ── Service tab ── */
 
   async run() {
     this._view = 'loading';
-    this.startProgressSequence();
     try {
-      await invokeExternalService(this.token, this.context, (message) => this.handleServiceProgress(message));
-      this.advanceProgressTo(REVIEW_PROGRESS_SEQUENCE.length - 1);
-      this.setLoadingMessage('Done.');
+      await invokeExternalService(this.token, this.context);
       this._isSuccess = true;
-      this._message = 'Done. Review request submitted.';
+      this._message = 'The external service executed successfully.';
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[invoke-service] Error:', err);
       this._isSuccess = false;
-      this._message = err.message || 'Review request failed. Please try again.';
-    } finally {
-      this.stopProgressSequence();
+      this._message = err.message || 'An unexpected error occurred.';
     }
     this._view = 'result';
   }
@@ -604,12 +374,7 @@ class RefDemoInvokeService extends LitElement {
       if (!cfg.actionUrl) {
         throw new Error('Workfront instance URL is not configured. Add a "workfront-instance-url" entry to /config/placeholders.json.');
       }
-      await updateWorkfrontTask(cfg.actionUrl, task, action, this.token);
-      // "Work On It" (acceptWork) only accepts the work; follow it with a status
-      // write to move the task to In Progress so it shows just the Complete action.
-      if (action.wfAction === 'acceptWork') {
-        await updateWorkfrontTask(cfg.actionUrl, task, { key: 'INP' }, this.token);
-      }
+      await updateWorkfrontTask(cfg.actionUrl, task.id, action.key);
       await this.loadTasks(); // refresh after a successful transition
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -626,16 +391,10 @@ class RefDemoInvokeService extends LitElement {
   renderConfirm() {
     return html`
       <div class="invoke-service-panel">
-        <p class="invoke-service-message">
-          Send this page for review?
-          <span class="info-tip" tabindex="0" role="button" aria-label="Endpoint configuration info">
-            ${ACTION_ICONS.info()}
-            <span class="info-tip-bubble" role="tooltip">Submission endpoint can be configured in the placeholders file with key : external-service-url</span>
-          </span>
-        </p>
+        <p class="invoke-service-message">Invoke the external service for this document?</p>
         <div class="invoke-service-actions">
-          <sl-button class="secondary" @click=${this.close}>No</sl-button>
-          <sl-button ?disabled=${!this._serviceUrl} @click=${this.run}>Yes</sl-button>
+          <sl-button class="secondary" @click=${this.close}>Cancel</sl-button>
+          <sl-button @click=${this.run}>Confirm</sl-button>
         </div>
       </div>`;
   }
@@ -675,7 +434,7 @@ class RefDemoInvokeService extends LitElement {
           <div class="invoke-service-panel">
             <div class="invoke-service-loading">
               <div class="spinner" aria-hidden="true"></div>
-              <p class="invoke-service-message">${this._loadingMessage}</p>
+              <p class="invoke-service-message">Executing external service…</p>
             </div>
           </div>`;
       case 'result':
@@ -687,49 +446,19 @@ class RefDemoInvokeService extends LitElement {
   }
 
   renderTask(task) {
+    const actions = actionsForStatus(task.status);
     const busy = this._busyTaskId === task.id;
-    const project = task.project?.name;
-    const due = formatTaskDate(task.plannedCompletionDate || task.commitDate);
-    const overdue = isTaskOverdue(task);
-    const pct = Math.round(task.percentComplete || 0);
-    const statusClass = (task.status || '').toLowerCase();
-    const taskTitle = task.URL
-      ? html`<a class="task-name task-name-link" href=${task.URL} target="_blank" rel="noopener" title=${task.name}>${task.name}</a>`
-      : html`<p class="task-name" title=${task.name}>${task.name}</p>`;
     return html`
       <li class="task">
-        <div class="task-head">
-          ${taskTitle}
-          <div class="task-actions">
-            ${busy
+        <div class="task-info">
+          <p class="task-name">${task.name}</p>
+          <span class="task-status status-${(task.status || '').toLowerCase()}">${task.statusLabel || task.status || '—'}</span>
+        </div>
+        <div class="task-actions">
+          ${busy
     ? html`<div class="spinner" aria-hidden="true"></div>`
-    : html`
-              ${TASK_ACTIONS.map((a) => {
-    const disabled = isActionDisabled(task.status, a.key);
-    return html`
-                <button
-                  class="icon-btn ${a.variant || 'primary'}"
-                  title=${disabled ? `${a.label} (unavailable)` : a.label}
-                  aria-label=${a.label}
-                  ?disabled=${disabled}
-                  @click=${() => { if (!disabled) this.runTaskAction(task, a); }}>${ACTION_ICONS[a.icon]()}</button>`;
-  })}
-              ${task.URL ? html`
-                <button class="icon-btn" title="Open in Workfront" aria-label="Open in Workfront" @click=${() => this.openTask(task)}>${ACTION_ICONS.external()}</button>` : nothing}`}
-          </div>
-        </div>
-        <div class="task-sub">
-          ${project ? html`<span class="task-project" title=${project}>${project}</span>` : nothing}
-          <span class="task-status status-${statusClass}">${task.statusLabel || task.status || '—'}</span>
-        </div>
-        <div class="task-foot">
-          <div class="task-progress">
-            <div class="progress-track">
-              <div class="progress-fill ${pct >= 100 ? 'complete' : ''}" style="width:${pct}%"></div>
-            </div>
-            <span class="progress-label">${taskProgressLabel(task)}</span>
-          </div>
-          ${due ? html`<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? ACTION_ICONS.clock() : nothing}${due}</span>` : nothing}
+    : actions.map((a) => html`
+              <sl-button class=${a.variant || ''} @click=${() => this.runTaskAction(task, a)}>${a.label}</sl-button>`)}
         </div>
       </li>`;
   }
@@ -755,33 +484,11 @@ class RefDemoInvokeService extends LitElement {
               <sl-button @click=${this.loadTasks}>Retry</sl-button>
             </div>
           </div>`;
-      case 'loaded': {
+      case 'loaded':
         if (!this._tasks.length) {
           return html`<div class="invoke-service-panel"><p class="invoke-service-message">No tasks assigned to you.</p></div>`;
         }
-        const tasks = this.filteredTasks;
-        const stats = this.taskStats;
-        return html`
-          <div class="tasks-view">
-            <div class="tasks-toolbar">
-              <button class="icon-btn refresh-btn" title="Refresh tasks" aria-label="Refresh tasks" @click=${this.loadTasks}>${ACTION_ICONS.refresh()}</button>
-            </div>
-            <div class="task-stats">
-              <div class="stat"><span class="stat-label" title="Assigned to you">Assigned to you</span><span class="stat-value">${stats.total}</span></div>
-              <div class="stat"><span class="stat-label" title="In progress">In progress</span><span class="stat-value">${stats.inProgress}</span></div>
-              <div class="stat"><span class="stat-label" title="Due this week">Due this week</span><span class="stat-value">${stats.dueThisWeek}</span></div>
-            </div>
-            <input
-              class="task-search"
-              type="search"
-              placeholder="Search tasks…"
-              .value=${this._taskQuery}
-              @input=${(e) => { this._taskQuery = e.target.value; }} />
-            ${tasks.length
-    ? html`<ul class="task-list">${tasks.map((t) => this.renderTask(t))}</ul>`
-    : html`<p class="invoke-service-message">No tasks match “${this._taskQuery}”.</p>`}
-          </div>`;
-      }
+        return html`<ul class="task-list">${this._tasks.map((t) => this.renderTask(t))}</ul>`;
       default:
         return nothing;
     }
@@ -803,8 +510,8 @@ class RefDemoInvokeService extends LitElement {
 
     return html`
       <div class="tabs" role="tablist">
+        ${this.renderTab('service', 'Service')}
         ${this.renderTab('tasks', 'Tasks')}
-        ${this.renderTab('service', 'Request Approval')}
       </div>
       <div class="tab-panel" role="tabpanel">
         ${this._tab === 'service' ? this.renderService() : this.renderTasks()}
