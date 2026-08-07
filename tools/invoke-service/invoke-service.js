@@ -65,6 +65,7 @@ const WORKFRONT_API_BASE = `/attask/api/${WORKFRONT_API_VERSION}`;
 const WORKFRONT_USER_PATH = `${WORKFRONT_API_BASE}/user/search`;
 const WORKFRONT_TASKS_PATH = `${WORKFRONT_API_BASE}/task/search`;
 const WORKFRONT_TASK_ACTION_PATH = `${WORKFRONT_API_BASE}/task`;
+const AIO_WF_ACTION_ENDPOINT = 'https://675172-referencedemopartner-stage.adobeioruntime.net/api/v1/web/ref-demo-api-gateway/wf-actions';
 
 // Workfront endpoints derived from a single "workfront-instance-url"
 // (e.g. https://aemshowcase2.my.workfront.com). URLs are only built when it is set.
@@ -81,9 +82,11 @@ async function fetchWorkfrontConfig(org, repo) {
 
 // Resolve a Workfront user ID from an email address.
 async function fetchWorkfrontUserId(instance, email, token) {
-  const target = new URL(`${instance}${WORKFRONT_USER_PATH}`);
+  const target = new URL(AIO_WF_ACTION_ENDPOINT);
+  target.searchParams.set('url', `${instance}${WORKFRONT_USER_PATH}`);
   target.searchParams.set('emailAddr', email);
   target.searchParams.set('fields', 'ID,name');
+  target.searchParams.set('method', 'GET');
 
   const resp = await fetch(target.toString(), {
     headers: { Authorization: `Bearer ${token}` },
@@ -107,7 +110,9 @@ const WORKFRONT_TASK_FIELDS = [
 ].join(',');
 
 async function fetchWorkfrontTasks(url, assignedToId, token) {
-  const target = new URL(url);
+  const target = new URL(AIO_WF_ACTION_ENDPOINT);
+  target.searchParams.set('url', url);
+  target.searchParams.set('method', 'GET');
   target.searchParams.set('fields', WORKFRONT_TASK_FIELDS);
   if (assignedToId) target.searchParams.set('assignedToID', assignedToId);
 
