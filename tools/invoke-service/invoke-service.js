@@ -155,7 +155,7 @@ async function updateWorkfrontTask(url, taskId, actionKey) {
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ taskId, action: actionKey }),
+    body: JSON.stringify({ taskId, status: actionKey }),
   });
   if (!resp.ok) {
     const body = await resp.text();
