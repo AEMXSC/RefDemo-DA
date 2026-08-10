@@ -75,7 +75,7 @@ async function fetchPlaceholders(org, repo) {
 const WORKFRONT_API_VERSION = 'v19.0';
 const WORKFRONT_API_BASE = `/attask/api/${WORKFRONT_API_VERSION}`;
 const WORKFRONT_USER_PATH = `${WORKFRONT_API_BASE}/user/search`;
-const WORKFRONT_TASKS_PATH = `${WORKFRONT_API_BASE}/task/search`;
+const WORKFRONT_TASKS_SEARCH_PATH = `${WORKFRONT_API_BASE}/task/search`;
 const WORKFRONT_TASK_ACTION_PATH = `${WORKFRONT_API_BASE}/task`;
 const AIO_WF_ACTION_ENDPOINT = 'https://675172-referencedemopartner-stage.adobeioruntime.net/api/v1/web/ref-demo-api-gateway/wf-actions';
 
@@ -87,7 +87,7 @@ async function fetchWorkfrontConfig(org, repo) {
   if (!instance) return { instance: '', tasksUrl: '', actionUrl: '' };
   return {
     instance,
-    tasksUrl: `${instance}${WORKFRONT_TASKS_PATH}`,
+    tasksUrl: `${instance}${WORKFRONT_TASKS_SEARCH_PATH}`,
     actionUrl: `${instance}${WORKFRONT_TASK_ACTION_PATH}`,
   };
 }
@@ -151,11 +151,15 @@ async function fetchWorkfrontTasks(url, assignedToId, token) {
   }));
 }
 
-async function updateWorkfrontTask(url, taskId, actionKey) {
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ taskId, status: actionKey }),
+async function updateWorkfrontTask(url, taskId, actionKey, token) {
+  // Route through the AIO gateway (same as fetchWorkfrontTasks) to avoid CORS.
+  const target = new URL(AIO_WF_ACTION_ENDPOINT);
+  target.searchParams.set('url', `${url}/${taskId}`);
+  target.searchParams.set('method', 'PUT');
+  target.searchParams.set('status', actionKey);
+
+  const resp = await fetch(target.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!resp.ok) {
     const body = await resp.text();
@@ -454,7 +458,7 @@ class RefDemoInvokeService extends LitElement {
       if (!cfg.actionUrl) {
         throw new Error('Workfront instance URL is not configured. Add a "workfront-instance-url" entry to /config/placeholders.json.');
       }
-      await updateWorkfrontTask(cfg.actionUrl, task.id, action.key);
+      await updateWorkfrontTask(cfg.actionUrl, task.id, action.key, this.token);
       await this.loadTasks(); // refresh after a successful transition
     } catch (err) {
       // eslint-disable-next-line no-console
