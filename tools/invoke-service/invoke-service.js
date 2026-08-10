@@ -487,13 +487,13 @@ class RefDemoInvokeService extends LitElement {
   renderConfirm() {
     return html`
       <div class="invoke-service-panel">
+      ${this._serviceUrl
+    ? html`<p class="endpoint-url" title=${this._serviceUrl}>${this._serviceUrl}</p>`
+    : `<p>Has to be configured in Placeholders</p>`}
         <p class="invoke-service-message">Invoke the external service for this document?</p>
-        ${this._serviceUrl
-    ? html`<p class="endpoint-url" title=${this._serviceUrl}>Endpoint: ${this._serviceUrl}</p>`
-    : nothing}
         <div class="invoke-service-actions">
           <sl-button class="secondary" @click=${this.close}>Cancel</sl-button>
-          <sl-button @click=${this.run}>Confirm</sl-button>
+          <sl-button ?disabled=${!this._serviceUrl} @click=${this.run}>Confirm</sl-button>
         </div>
       </div>`;
   }
