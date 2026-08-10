@@ -25,14 +25,16 @@ const iconFailure = () => html`
     <path d="M8 8l8 8M16 8l-8 8" stroke="#fff" stroke-width="2" stroke-linecap="round"></path>
   </svg>`;
 
-/* Small action icons (16px, currentColor) */
-const SVG = (paths) => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+/* Small action icons (15px). Each icon is ONE self-contained <svg> template —
+   the inner <path> nodes must live in the SAME html`` as the <svg> so they are
+   parsed in the SVG namespace. A separate html`` path fragment renders as an
+   inert HTMLUnknownElement and shows nothing. */
 const ACTION_ICONS = {
-  play: () => SVG(html`<path d="M6 4l14 8-14 8z" fill="currentColor" stroke="none"></path>`),
-  check: () => SVG(html`<path d="M5 12.5l4.5 4.5L19 7"></path>`),
-  close: () => SVG(html`<path d="M6 6l12 12M18 6L6 18"></path>`),
-  external: () => SVG(html`<path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path>`),
-  clock: () => SVG(html`<circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path>`),
+  play: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l14 8-14 8z" fill="currentColor" stroke="none"></path></svg>`,
+  check: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>`,
+  close: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>`,
+  external: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>`,
+  clock: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>`,
 };
 
 /* ── Placeholders config ─────────────────────────────────────────────── */
@@ -278,24 +280,26 @@ async function invokeExternalService(token, context) {
   return resp.json();
 }
 
-// Which actions are offered per Workfront status code.
-const STATUS_ACTIONS = {
-  NEW: [
-    { key: 'INP', label: 'Start', icon: 'play' },
-    { key: 'CPL', label: 'Complete', icon: 'check' },
-    { key: 'REJ', label: 'Reject', icon: 'close', variant: 'secondary' },
-  ],
-  INP: [
-    { key: 'CPL', label: 'Complete', icon: 'check' },
-    { key: 'REJ', label: 'Reject', icon: 'close', variant: 'secondary' },
-  ],
-  CPL: [],
-  REJ: [],
+// Every task always shows the same set of action buttons; each one is disabled
+// when the transition is not valid from the task's current status (e.g. a task
+// already in progress shows Start disabled, a completed task shows Complete
+// disabled). Keeps the button layout stable across statuses.
+const TASK_ACTIONS = [
+  { key: 'INP', label: 'Start', icon: 'play' },
+  { key: 'CPL', label: 'Complete', icon: 'check' },
+  { key: 'REJ', label: 'Reject', icon: 'close', variant: 'secondary' },
+];
+
+// Statuses from which each action is still available. Anything else → disabled.
+const ACTION_ENABLED_FROM = {
+  INP: ['NEW'], // can only Start a NEW task
+  CPL: ['NEW', 'INP'], // can Complete while new or in progress
+  REJ: ['NEW', 'INP'], // can Reject while new or in progress
 };
 
-function actionsForStatus(status) {
-  return STATUS_ACTIONS[(status || '').toUpperCase()]
-    || [{ key: 'CPL', label: 'Complete', icon: 'check' }, { key: 'REJ', label: 'Reject', icon: 'close', variant: 'secondary' }];
+function isActionDisabled(status, actionKey) {
+  const from = ACTION_ENABLED_FROM[actionKey] || [];
+  return !from.includes((status || '').toUpperCase());
 }
 
 // True when the task is past its due date and not yet complete.
@@ -522,7 +526,6 @@ class RefDemoInvokeService extends LitElement {
   }
 
   renderTask(task) {
-    const actions = actionsForStatus(task.status);
     const busy = this._busyTaskId === task.id;
     const project = task.project?.name;
     const due = formatTaskDate(task.plannedCompletionDate || task.commitDate);
@@ -537,12 +540,16 @@ class RefDemoInvokeService extends LitElement {
             ${busy
     ? html`<div class="spinner" aria-hidden="true"></div>`
     : html`
-              ${actions.map((a) => html`
+              ${TASK_ACTIONS.map((a) => {
+    const disabled = isActionDisabled(task.status, a.key);
+    return html`
                 <button
                   class="icon-btn ${a.variant || 'primary'}"
-                  title=${a.label}
+                  title=${disabled ? `${a.label} (unavailable)` : a.label}
                   aria-label=${a.label}
-                  @click=${() => this.runTaskAction(task, a)}>${ACTION_ICONS[a.icon]()}</button>`)}
+                  ?disabled=${disabled}
+                  @click=${() => { if (!disabled) this.runTaskAction(task, a); }}>${ACTION_ICONS[a.icon]()}</button>`;
+  })}
               ${task.URL ? html`
                 <button class="icon-btn" title="Open in Workfront" aria-label="Open in Workfront" @click=${() => this.openTask(task)}>${ACTION_ICONS.external()}</button>` : nothing}`}
           </div>

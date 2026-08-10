@@ -344,8 +344,20 @@
   cursor: pointer;
 }
 
-.icon-btn:hover {
+.icon-btn svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+  pointer-events: none;
+}
+
+.icon-btn:hover:not(:disabled) {
   background: var(--spectrum-global-color-gray-100, #f5f5f5);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .icon-btn.primary {
