@@ -339,6 +339,7 @@ class RefDemoInvokeService extends LitElement {
     _view: { state: true }, // 'confirm' | 'loading' | 'result'
     _isSuccess: { state: true },
     _message: { state: true },
+    _serviceUrl: { state: true },
     // Tasks tab
     _tasksState: { state: true }, // 'idle' | 'loading' | 'loaded' | 'error'
     _tasks: { state: true },
@@ -391,12 +392,23 @@ class RefDemoInvokeService extends LitElement {
     super.connectedCallback();
     this.shadowRoot.adoptedStyleSheets = [styles];
     this.gateUser();
+    this.loadServiceUrl();
   }
 
   async gateUser() {
     const profile = await fetchUserProfile(this.token);
     this._allowed = typeof profile.userEmail === 'string'
       && profile.userEmail.toLowerCase().endsWith('@adobe.com');
+  }
+
+  async loadServiceUrl() {
+    try {
+      const { org, repo } = resolveOrgRepo(this.context);
+      const cfg = await fetchPlaceholders(org, repo);
+      this._serviceUrl = cfg.externalServiceUrl;
+    } catch (e) {
+      this._serviceUrl = '';
+    }
   }
 
   /* ── Service tab ── */
@@ -476,6 +488,9 @@ class RefDemoInvokeService extends LitElement {
     return html`
       <div class="invoke-service-panel">
         <p class="invoke-service-message">Invoke the external service for this document?</p>
+        ${this._serviceUrl
+    ? html`<p class="endpoint-url" title=${this._serviceUrl}>Endpoint: ${this._serviceUrl}</p>`
+    : nothing}
         <div class="invoke-service-actions">
           <sl-button class="secondary" @click=${this.close}>Cancel</sl-button>
           <sl-button @click=${this.run}>Confirm</sl-button>
