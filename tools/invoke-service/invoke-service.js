@@ -159,6 +159,7 @@ async function updateWorkfrontTask(url, taskId, actionKey, token) {
   target.searchParams.set('status', actionKey);
 
   const resp = await fetch(target.toString(), {
+    method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!resp.ok) {
@@ -619,9 +620,9 @@ class RefDemoInvokeService extends LitElement {
         return html`
           <div class="tasks-view">
             <div class="task-stats">
-              <div class="stat"><span class="stat-label">Assigned to you</span><span class="stat-value">${stats.total}</span></div>
-              <div class="stat"><span class="stat-label">In progress</span><span class="stat-value">${stats.inProgress}</span></div>
-              <div class="stat"><span class="stat-label">Due this week</span><span class="stat-value">${stats.dueThisWeek}</span></div>
+              <div class="stat"><span class="stat-label" title="Assigned to you">Assigned to you</span><span class="stat-value">${stats.total}</span></div>
+              <div class="stat"><span class="stat-label" title="In progress">In progress</span><span class="stat-value">${stats.inProgress}</span></div>
+              <div class="stat"><span class="stat-label" title="Due this week">Due this week</span><span class="stat-value">${stats.dueThisWeek}</span></div>
             </div>
             <input
               class="task-search"
