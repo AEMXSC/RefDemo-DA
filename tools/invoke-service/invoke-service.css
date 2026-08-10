@@ -158,7 +158,7 @@
 /* Summary stats header */
 .task-stats {
   display: flex;
-  gap: 8px;
+  gap: 4px;
 }
 
 .stat {
