@@ -602,7 +602,7 @@ class RefDemoInvokeService extends LitElement {
           </div>
         </div>
         <div class="task-sub">
-          ${project ? html`<span class="task-project" title=${project}>${project}</span><span class="dot">·</span>` : nothing}
+          ${project ? html`<span class="task-project" title=${project}>${project}</span>` : nothing}
           <span class="task-status status-${statusClass}">${task.statusLabel || task.status || '—'}</span>
         </div>
         <div class="task-foot">

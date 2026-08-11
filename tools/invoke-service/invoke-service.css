@@ -44,7 +44,8 @@
   justify-content: center;
   padding: 16px 24px;
   box-sizing: border-box;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* ── Shared panels ────────────────────────────────────────────────── */
@@ -185,9 +186,8 @@
 .stat-label {
   font-size: 10px;
   color: var(--spectrum-global-color-gray-600, #808080);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .stat-value {
@@ -247,6 +247,7 @@
 
 .task-status {
   flex-shrink: 0;
+  margin-left: auto;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -322,7 +323,7 @@
   align-items: center;
   gap: 3px;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--spectrum-global-color-gray-700, #6e6e6e);
   white-space: nowrap;
 }
@@ -408,11 +409,11 @@
 
 .info-tip-bubble {
   position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: max-content;
-  max-width: 220px;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 240px;
+  max-width: 240px;
+  white-space: normal;
   padding: 8px 10px;
   border-radius: 6px;
   background: var(--spectrum-global-color-gray-800, #4b4b4b);
