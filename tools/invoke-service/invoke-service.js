@@ -151,12 +151,22 @@ async function fetchWorkfrontTasks(url, assignedToId, token) {
   }));
 }
 
-async function updateWorkfrontTask(url, taskId, actionKey, token) {
+async function updateWorkfrontTask(url, task, action, token) {
   // Route through the AIO gateway (same as fetchWorkfrontTasks) to avoid CORS.
   const target = new URL(AIO_WF_ACTION_ENDPOINT);
-  target.searchParams.set('url', `${url}/${taskId}`);
   target.searchParams.set('method', 'PUT');
-  target.searchParams.set('status', actionKey);
+
+  if (action.wfAction) {
+    // Workfront "work action" (e.g. acceptWork = "Work On It"). This is what the
+    // native UI sends — a plain status write is a no-op for a NEW assigned task.
+    target.searchParams.set('url', url);
+    target.searchParams.set('action', action.wfAction);
+    target.searchParams.set('id', task.id);
+  } else {
+    // Fallback: direct status write (used until the work-action name is known).
+    target.searchParams.set('url', `${url}/${task.id}`);
+    target.searchParams.set('status', action.key);
+  }
 
   const resp = await fetch(target.toString(), {
     method: 'PUT',
@@ -290,7 +300,10 @@ async function invokeExternalService(token, context) {
 // already in progress shows Start disabled, a completed task shows Complete
 // disabled). Keeps the button layout stable across statuses.
 const TASK_ACTIONS = [
-  { key: 'INP', label: 'Start', icon: 'play' },
+  // wfAction = Workfront work-action verb (from the native "Work On It" call).
+  // Start is confirmed (acceptWork); Complete/Reject verbs are TBD — capture the
+  // "Mark as Done" / reject requests and fill them in to switch off the fallback.
+  { key: 'INP', label: 'Start', icon: 'play', wfAction: 'acceptWork' },
   { key: 'CPL', label: 'Complete', icon: 'check' },
   { key: 'REJ', label: 'Reject', icon: 'close', variant: 'secondary' },
 ];
@@ -471,7 +484,7 @@ class RefDemoInvokeService extends LitElement {
       if (!cfg.actionUrl) {
         throw new Error('Workfront instance URL is not configured. Add a "workfront-instance-url" entry to /config/placeholders.json.');
       }
-      await updateWorkfrontTask(cfg.actionUrl, task.id, action.key, this.token);
+      await updateWorkfrontTask(cfg.actionUrl, task, action, this.token);
       await this.loadTasks(); // refresh after a successful transition
     } catch (err) {
       // eslint-disable-next-line no-console
