@@ -410,9 +410,9 @@
 .info-tip-bubble {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
-  width: 240px;
-  max-width: 240px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 210px;
   white-space: normal;
   padding: 8px 10px;
   border-radius: 6px;
