@@ -379,3 +379,59 @@
   color: #d7373f;
   border-color: #f3c9cb;
 }
+
+/* Tasks toolbar (refresh) */
+.tasks-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.refresh-btn {
+  color: var(--spectrum-global-color-gray-700, #6e6e6e);
+}
+
+/* Info tip (Service tab) */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 4px;
+  color: var(--spectrum-global-color-gray-600, #808080);
+  cursor: help;
+  outline: none;
+}
+
+.info-tip svg {
+  display: block;
+}
+
+.info-tip-bubble {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--spectrum-global-color-gray-800, #4b4b4b);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.info-tip:hover .info-tip-bubble,
+.info-tip:focus .info-tip-bubble,
+.info-tip:focus-within .info-tip-bubble {
+  opacity: 1;
+  visibility: visible;
+}

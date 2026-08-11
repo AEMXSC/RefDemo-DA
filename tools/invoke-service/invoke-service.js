@@ -35,6 +35,8 @@ const ACTION_ICONS = {
   close: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>`,
   external: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>`,
   clock: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>`,
+  refresh: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v5h-5"></path></svg>`,
+  info: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg>`,
 };
 
 /* ── Placeholders config ─────────────────────────────────────────────── */
@@ -364,7 +366,7 @@ class RefDemoInvokeService extends LitElement {
 
   constructor() {
     super();
-    this._tab = 'service';
+    this._tab = 'tasks';
     this._view = 'confirm';
     this._tasksState = 'idle';
     this._tasks = [];
@@ -413,6 +415,10 @@ class RefDemoInvokeService extends LitElement {
     const profile = await fetchUserProfile(this.token);
     this._allowed = typeof profile.userEmail === 'string'
       && profile.userEmail.toLowerCase().endsWith('@adobe.com');
+    // Tasks is the default tab — kick off its load once access is granted.
+    if (this._allowed && this._tab === 'tasks' && this._tasksState === 'idle') {
+      this.loadTasks();
+    }
   }
 
   async loadServiceUrl() {
@@ -506,10 +512,13 @@ class RefDemoInvokeService extends LitElement {
   renderConfirm() {
     return html`
       <div class="invoke-service-panel">
-      ${this._serviceUrl
-    ? html`<p class="endpoint-url" title=${this._serviceUrl}>${this._serviceUrl}</p>`
-    : `<p>Has to be configured in Placeholders</p>`}
-        <p class="invoke-service-message">Invoke the external service for this document?</p>
+        <p class="invoke-service-message">
+          Invoke the external service for this document?
+          <span class="info-tip" tabindex="0" role="button" aria-label="Endpoint configuration info">
+            ${ACTION_ICONS.info()}
+            <span class="info-tip-bubble" role="tooltip">Submission endpoint can be configured in the placeholders file with key : external-service-url</span>
+          </span>
+        </p>
         <div class="invoke-service-actions">
           <sl-button class="secondary" @click=${this.close}>Cancel</sl-button>
           <sl-button ?disabled=${!this._serviceUrl} @click=${this.run}>Confirm</sl-button>
@@ -637,6 +646,9 @@ class RefDemoInvokeService extends LitElement {
         const stats = this.taskStats;
         return html`
           <div class="tasks-view">
+            <div class="tasks-toolbar">
+              <button class="icon-btn refresh-btn" title="Refresh tasks" aria-label="Refresh tasks" @click=${this.loadTasks}>${ACTION_ICONS.refresh()}</button>
+            </div>
             <div class="task-stats">
               <div class="stat"><span class="stat-label" title="Assigned to you">Assigned to you</span><span class="stat-value">${stats.total}</span></div>
               <div class="stat"><span class="stat-label" title="In progress">In progress</span><span class="stat-value">${stats.inProgress}</span></div>
@@ -674,8 +686,8 @@ class RefDemoInvokeService extends LitElement {
 
     return html`
       <div class="tabs" role="tablist">
-        ${this.renderTab('service', 'Service')}
         ${this.renderTab('tasks', 'Tasks')}
+        ${this.renderTab('service', 'Service')}
       </div>
       <div class="tab-panel" role="tabpanel">
         ${this._tab === 'service' ? this.renderService() : this.renderTasks()}
