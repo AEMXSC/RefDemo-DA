@@ -485,6 +485,11 @@ class RefDemoInvokeService extends LitElement {
         throw new Error('Workfront instance URL is not configured. Add a "workfront-instance-url" entry to /config/placeholders.json.');
       }
       await updateWorkfrontTask(cfg.actionUrl, task, action, this.token);
+      // "Work On It" (acceptWork) only accepts the work; follow it with a status
+      // write to move the task to In Progress so it shows just the Complete action.
+      if (action.wfAction === 'acceptWork') {
+        await updateWorkfrontTask(cfg.actionUrl, task, { key: 'INP' }, this.token);
+      }
       await this.loadTasks(); // refresh after a successful transition
     } catch (err) {
       // eslint-disable-next-line no-console
