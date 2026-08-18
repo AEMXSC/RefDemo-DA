@@ -225,6 +225,15 @@
   min-width: 0;
 }
 
+.task-name-link {
+  text-decoration: none;
+}
+
+.task-name-link:hover,
+.task-name-link:focus-visible {
+  text-decoration: underline;
+}
+
 .task-sub {
   display: flex;
   align-items: center;
