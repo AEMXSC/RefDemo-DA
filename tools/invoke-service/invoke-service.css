@@ -1,19 +1,54 @@
-/* Invoke External Service – DA Library Plugin (Spectrum CSS) */
+/* Invoke External Service – DA Library Plugin (Lit / shadow DOM) */
 
-body {
-  margin: 0;
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  box-sizing: border-box;
   font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI',
     Roboto, sans-serif;
 }
 
-#invoke-service-root {
+/* ── Tabs ─────────────────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--spectrum-global-color-gray-300, #d3d3d3);
+}
+
+.tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--spectrum-global-color-gray-700, #6e6e6e);
+  cursor: pointer;
+}
+
+.tab.active {
+  color: var(--spectrum-global-color-gray-900, #323232);
+  font-weight: 700;
+  border-bottom-color: var(--spectrum-global-color-blue-600, #1473e6);
+}
+
+.tab-panel {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
   padding: 16px 24px;
   box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
+
+/* ── Shared panels ────────────────────────────────────────────────── */
 
 .invoke-service-panel {
   display: flex;
@@ -36,11 +71,33 @@ body {
   justify-content: center;
 }
 
+.endpoint-url {
+  margin: -8px 0 0;
+  font-size: 10px;
+  line-height: 1.4;
+  color: black;
+  word-break: break-all;
+  max-width: 280px;
+}
+
 /* Loading */
 .invoke-service-loading {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--spectrum-global-color-gray-300, #d3d3d3);
+  border-top-color: var(--spectrum-global-color-blue-600, #1473e6);
+  border-radius: 50%;
+  animation: invoke-service-spin 0.8s linear infinite;
+}
+
+@keyframes invoke-service-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Result */
@@ -67,4 +124,315 @@ body {
   font-size: 13px;
   color: var(--spectrum-global-color-gray-700, #6e6e6e);
   max-width: 280px;
+}
+
+/* ── Tasks list ───────────────────────────────────────────────────── */
+
+.tasks-view {
+  align-self: stretch;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--spectrum-global-color-gray-900, #323232);
+  border: 1px solid var(--spectrum-global-color-gray-300, #d3d3d3);
+  border-radius: 6px;
+  outline: none;
+}
+
+.task-search:focus {
+  border-color: var(--spectrum-global-color-blue-600, #1473e6);
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Summary stats header */
+.task-stats {
+  display: flex;
+  gap: 4px;
+}
+
+.stat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--spectrum-global-color-gray-200, #e6e6e6);
+  border-radius: 6px;
+  background: var(--spectrum-global-color-gray-75, #fafafa);
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--spectrum-global-color-gray-600, #808080);
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--spectrum-global-color-gray-900, #323232);
+}
+
+/* Task card */
+.task {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--spectrum-global-color-gray-300, #d3d3d3);
+  border-radius: 8px;
+}
+
+.task-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.task-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--spectrum-global-color-gray-900, #323232);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.task-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--spectrum-global-color-gray-600, #808080);
+  min-width: 0;
+}
+
+.task-project {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+.task-sub .dot {
+  color: var(--spectrum-global-color-gray-400, #b3b3b3);
+}
+
+.task-status {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--spectrum-global-color-gray-200, #e6e6e6);
+  color: var(--spectrum-global-color-gray-700, #6e6e6e);
+}
+
+.task-status.status-new {
+  background: #e0f2ff;
+  color: #0265dc;
+}
+
+.task-status.status-inp {
+  background: #fff3d9;
+  color: #a67300;
+}
+
+.task-status.status-cpl {
+  background: #e3f5ec;
+  color: #12805c;
+}
+
+.task-status.status-rej {
+  background: #fbe3e4;
+  color: #d7373f;
+}
+
+/* Progress + due footer */
+.task-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.task-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.progress-track {
+  width: 100%;
+  max-width: 160px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--spectrum-global-color-gray-200, #e6e6e6);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--spectrum-global-color-blue-600, #1473e6);
+}
+
+.progress-fill.complete {
+  background: #12805c;
+}
+
+.progress-label {
+  font-size: 11px;
+  color: var(--spectrum-global-color-gray-600, #808080);
+}
+
+.task-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--spectrum-global-color-gray-700, #6e6e6e);
+  white-space: nowrap;
+}
+
+.task-due.overdue {
+  color: #d7373f;
+  font-weight: 600;
+}
+
+/* Icon action buttons */
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--spectrum-global-color-gray-300, #d3d3d3);
+  background: #fff;
+  color: var(--spectrum-global-color-gray-800, #4b4b4b);
+  cursor: pointer;
+}
+
+.icon-btn svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+  pointer-events: none;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--spectrum-global-color-gray-100, #f5f5f5);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.icon-btn.primary {
+  border-color: var(--spectrum-global-color-blue-600, #1473e6);
+  color: var(--spectrum-global-color-blue-600, #1473e6);
+}
+
+.icon-btn.secondary {
+  color: #d7373f;
+  border-color: #f3c9cb;
+}
+
+/* Tasks toolbar (refresh) */
+.tasks-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.refresh-btn {
+  color: var(--spectrum-global-color-gray-700, #6e6e6e);
+}
+
+/* Info tip (Service tab) */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 4px;
+  color: var(--spectrum-global-color-gray-600, #808080);
+  cursor: help;
+  outline: none;
+}
+
+.info-tip svg {
+  display: block;
+}
+
+.info-tip-bubble {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-70%);
+  width: 210px;
+  white-space: normal;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--spectrum-global-color-gray-800, #4b4b4b);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.info-tip:hover .info-tip-bubble,
+.info-tip:focus .info-tip-bubble,
+.info-tip:focus-within .info-tip-bubble {
+  opacity: 1;
+  visibility: visible;
 }
