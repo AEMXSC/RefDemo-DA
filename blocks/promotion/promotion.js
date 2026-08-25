@@ -421,8 +421,8 @@ export default async function decorate(block) {
     isAuthor, hostname, aemAuthorUrl, aemPublishUrl,
   });
 
-  if (!contentPath) {
-    logWarn('No content path configured');
+  //if (!contentPath) {
+    //logWarn('No content path configured');
     if (isAuthor) {
       block.innerHTML = `<div class="promotion-card promotion-placeholder">
         <div class="promotion-content">
@@ -432,8 +432,8 @@ export default async function decorate(block) {
         </div>
       </div>`;
     }
-    return;
-  }
+    //return;
+  //}
 
   try {
     const cfItem = await fetchContentFragment(
