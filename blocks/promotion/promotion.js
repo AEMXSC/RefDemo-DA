@@ -412,7 +412,7 @@ export default async function decorate(block) {
 
   block.innerHTML = '';
 
-  const isAuthor = isAuthorEnvironment();
+  const isAuthor = window.location.href.indexOf("/da-block-collection/docs/library/blocks/promotion") > -1;
   const hostname = getMetadata('hostname');
   const aemAuthorUrl = getMetadata('authorurl') || '';
   const aemPublishUrl = hostname?.replace('author', 'publish')?.replace(/\/$/, '') || '';
