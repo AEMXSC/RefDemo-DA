@@ -4,6 +4,13 @@
   "editUrlPattern": "https://da.live/edit#/{{org}}/{{site}}{{pathname}}",
   "plugins": [
     {
+      "id": "demo-pilot",
+      "title": "Demo Pilot",
+      "environments": ["edit"],
+      "daLibrary": true,
+      "url": "https://demo-pilot-extension--refdemo-da--aemxsc.aem.live/tools/demo-pilot.html"
+    },
+    {
       "id": "da-plugin-demo",
       "title": "Plugin demo",
       "environments": ["edit"],
