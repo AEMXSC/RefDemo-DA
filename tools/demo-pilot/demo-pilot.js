@@ -11,7 +11,6 @@ import { fetchUserEmail } from './lib/userProfile.js';
 import { setAnalyticsContext } from './lib/analytics.js';
 import { readTexts } from './lib/textStorage.js';
 import { fetchAemConfig } from './lib/aemConfig.js';
-import { loadCachedImages } from './lib/imageCache.js';
 import { AEM_ORG_ID } from './config.js';
 import { renderImagesTab } from './tabs/imagesTab.js';
 import { renderTextsTab } from './tabs/textsTab.js';
@@ -27,7 +26,6 @@ const root = document.getElementById('demo-pilot-root');
 
 const state = {
   activeTab: 'images',
-  images: [],
   texts: {},
   themes: [],
   themesLoaded: false,
@@ -86,9 +84,6 @@ function render(ctx) {
   }).catch(() => { /* analytics must not surface errors */ });
 
   state.texts = await readTexts({ org, repo, token }).catch(() => ({}));
-  // Browser-cached images from a previous session for this exact site — see
-  // lib/imageCache.js. Shown immediately, no re-scrape/re-upload needed.
-  state.images = loadCachedImages({ org, repo });
 
   const ctx = {
     state,

@@ -5,13 +5,13 @@
  * (lib/uploadAssets.js) which wrote into AEM DAM through a backend Runtime
  * action — images now live in DA itself, no AEM Author/DAM involved.
  *
- * Image bytes are fetched client-side (fetch(sourceUrl)) with no backend
- * proxy. This means source sites that don't send CORS headers on their image
- * responses (common for hotlinked assets) will fail per-image — surfaced as
- * a normal { ok: false, error } result rather than aborting the batch.
+ * The Source API is given the sourceUrl and fetches the bytes itself
+ * (putRemoteBinarySource) rather than the plugin fetching them client-side —
+ * source sites commonly don't send CORS headers on their image responses,
+ * which made a client-side fetch(sourceUrl) fail per-image.
  */
 
-import { putBinarySource, publishSource } from './daAdmin.js';
+import { putRemoteBinarySource, publishSource } from './daAdmin.js';
 import { ASSETS_FOLDER } from '../config.js';
 
 function folderForSite(siteUrl) {
@@ -29,15 +29,18 @@ function filenameForUrl(url, index) {
   }
 }
 
-/** Best-effort natural dimensions of an already-fetched image blob. */
-function readImageDimensions(blob) {
+/**
+ * Best-effort natural dimensions of a (possibly cross-origin) image URL.
+ * Reading naturalWidth/naturalHeight off a loaded <img> doesn't require CORS
+ * headers — only pixel access (canvas, etc.) does — so this works directly
+ * against the original sourceUrl.
+ */
+function readImageDimensions(url) {
   return new Promise((resolve) => {
-    const objectUrl = URL.createObjectURL(blob);
     const img = new Image();
-    const done = (dims) => { URL.revokeObjectURL(objectUrl); resolve(dims); };
-    img.onload = () => done({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => done({ width: null, height: null });
-    img.src = objectUrl;
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => resolve({ width: null, height: null });
+    img.src = url;
   });
 }
 
@@ -81,21 +84,16 @@ export async function* uploadImagesToDa(sourceUrls, ctx) {
   for (let i = 0; i < urls.length; i += 1) {
     const sourceUrl = urls[i];
     try {
-      // eslint-disable-next-line no-await-in-loop -- sequential so upload
-      // progress can be reported incrementally, same as the DAM flow did
-      const resp = await fetch(sourceUrl);
-      if (!resp.ok) throw new Error(`image fetch failed: HTTP ${resp.status}`);
-      // eslint-disable-next-line no-await-in-loop
-      const blob = await resp.blob();
       const filename = filenameForUrl(sourceUrl, i);
       const path = `${ASSETS_FOLDER}/${folder}/${filename}`;
+      // sequential so upload progress can be reported incrementally, same as the DAM flow did
       // eslint-disable-next-line no-await-in-loop
-      await putBinarySource({
-        org, repo, path, token, blob, filename,
+      await putRemoteBinarySource({
+        org, repo, path, token, sourceUrl, title: filename,
       });
       // eslint-disable-next-line no-await-in-loop
       const [{ width, height }, url] = await Promise.all([
-        readImageDimensions(blob),
+        readImageDimensions(sourceUrl),
         deliveryUrl({
           org, repo, ref: ref || 'main', path, token,
         }).catch(() => ''),

@@ -68,23 +68,29 @@ export async function putJsonSource({
 }
 
 /**
- * Create/overwrite a binary file (e.g. an image) via the Source API. Used by
- * lib/uploadImages.js to write scraped images into the DA site's own
- * /assets/images folder instead of AEM DAM.
+ * Create/overwrite a binary file (e.g. an image) via the Source API, having
+ * DA fetch the bytes itself from a remote URL. Used by lib/uploadImages.js
+ * to write scraped images into the DA site's own /assets/images folder
+ * instead of AEM DAM — fetching server-side (rather than a client-side
+ * fetch(sourceUrl) + multipart upload) avoids CORS failures on source sites
+ * that don't send CORS headers on their image responses.
  */
-export async function putBinarySource({
-  org, repo, path, token, blob, filename,
+export async function putRemoteBinarySource({
+  org, repo, path, token, sourceUrl, title, alt, tags,
 }) {
-  const body = new FormData();
-  body.append('data', blob, filename || path.split('/').pop());
   const resp = await fetch(sourcePath(org, repo, path), {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      path,
+      title,
+      source: { type: 'url', url: sourceUrl },
+      metadata: { alt, tags },
+    }),
   });
   if (!resp.ok) {
     const text = await resp.text().catch(() => '');
-    throw new Error(`putBinarySource ${path} -> HTTP ${resp.status} ${text.slice(0, 200)}`);
+    throw new Error(`putRemoteBinarySource ${path} -> HTTP ${resp.status} ${text.slice(0, 200)}`);
   }
 }
 
