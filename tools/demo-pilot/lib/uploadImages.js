@@ -5,16 +5,19 @@
  * (lib/uploadAssets.js) which wrote into AEM DAM through a backend Runtime
  * action — images now live in DA itself, no AEM Author/DAM involved.
  *
- * Image bytes are fetched client-side (fetch(sourceUrl)) with no backend
- * proxy — DA's Source API has no "fetch this remote URL for me" mode (see
- * putBinarySource in lib/daAdmin.js), so there's no way to avoid this fetch.
- * Source sites that don't send CORS headers on their image responses
- * (common for hotlinked assets) will fail per-image — surfaced as a normal
- * { ok: false, error } result rather than aborting the batch.
+ * Image bytes are fetched via the `fetch-image` Adobe I/O Runtime action
+ * (FETCH_IMAGE_ACTION_URL) rather than a direct browser fetch(sourceUrl) —
+ * many scraped sites don't send CORS headers on their image responses
+ * (common for hotlinked assets), which a browser blocks outright regardless
+ * of what's sent. The action fetches server-side and returns the bytes
+ * base64-encoded, same response contract as the existing get-dam-asset
+ * action (see lib/clipboard.js). Falls back to a direct client-side fetch
+ * when FETCH_IMAGE_ACTION_URL isn't configured yet.
  */
 
 import { putBinarySource, publishSource } from './daAdmin.js';
-import { ASSETS_FOLDER } from '../config.js';
+import { base64ToBlob } from './clipboard.js';
+import { ASSETS_FOLDER, FETCH_IMAGE_ACTION_URL } from '../config.js';
 
 function folderForSite(siteUrl) {
   try { return new URL(siteUrl).host.replace(/^www\./, '').replace(/\./g, '-'); } catch (_) { return 'unknown-site'; }
@@ -41,6 +44,40 @@ function readImageDimensions(blob) {
     img.onerror = () => done({ width: null, height: null });
     img.src = objectUrl;
   });
+}
+
+/** Direct client-side fetch — used only when the proxy action isn't configured. */
+async function fetchImageBlobDirect(sourceUrl) {
+  const resp = await fetch(sourceUrl);
+  if (!resp.ok) throw new Error(`image fetch failed: HTTP ${resp.status}`);
+  return resp.blob();
+}
+
+/**
+ * Fetch a scraped image's bytes via the fetch-image Runtime action so the
+ * request happens server-side, sidestepping the source site's CORS headers
+ * entirely. Same request/response shape as copyDamAssetToClipboard's call
+ * to get-dam-asset (see lib/clipboard.js) — POST { url }, get back
+ * { body: { contentType, base64 } }.
+ */
+async function fetchImageBlob(sourceUrl) {
+  if (!FETCH_IMAGE_ACTION_URL) return fetchImageBlobDirect(sourceUrl);
+
+  const resp = await fetch(FETCH_IMAGE_ACTION_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: sourceUrl }),
+  });
+  const text = await resp.text();
+  let json;
+  try { json = text ? JSON.parse(text) : null; } catch (_) { json = null; }
+  if (!resp.ok) {
+    const msg = (json && json.error && (json.error.body?.error || json.error)) || `HTTP ${resp.status}`;
+    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+  }
+  const { contentType, base64 } = (json && json.body) || json || {};
+  if (!base64) throw new Error('fetch-image: invalid response');
+  return base64ToBlob(base64, contentType || 'application/octet-stream');
 }
 
 /**
@@ -85,10 +122,7 @@ export async function* uploadImagesToDa(sourceUrls, ctx) {
     try {
       // sequential so upload progress can be reported incrementally, same as the DAM flow did
       // eslint-disable-next-line no-await-in-loop
-      const resp = await fetch(sourceUrl);
-      if (!resp.ok) throw new Error(`image fetch failed: HTTP ${resp.status}`);
-      // eslint-disable-next-line no-await-in-loop
-      const blob = await resp.blob();
+      const blob = await fetchImageBlob(sourceUrl);
       // Guards against SVGs that dodge imagesTab's isSvg() URL check (e.g. a
       // path with no ".svg" extension that actually serves SVG bytes) —
       // without this they'd be written with a raster filename/extension and

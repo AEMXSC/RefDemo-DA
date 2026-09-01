@@ -24,6 +24,13 @@ export const ENSURE_IMPORT_FOLDER_ACTION_URL = 'https://3635370-966fuchsiacentip
 // even pointed at the right host, Author isn't generally CORS-open to
 // arbitrary browser origins. See lib/clipboard.js.
 export const GET_DAM_ASSET_ACTION_URL = 'https://3635370-966fuchsiacentipede.adobeioruntime.net/api/v1/web/demo-pilot/get-dam-asset';
+// Fetches an arbitrary scraped-site image URL server-side and returns it
+// base64-encoded with CORS headers — needed because a browser fetch() of
+// that URL is blocked whenever the source site omits CORS headers on its
+// image responses (common for hotlinked assets). See lib/uploadImages.js.
+// Not yet deployed — fill in after `aio app deploy`; uploadImagesToDa()
+// falls back to a direct client-side fetch while this is empty.
+export const FETCH_IMAGE_ACTION_URL = '';
 
 // IMS Organization ID for the AEM Cloud Service instance behind
 // aem.repositoryId (sent as x-gw-ims-org-id on Assets HTTP API calls — see
