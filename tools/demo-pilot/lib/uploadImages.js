@@ -11,7 +11,7 @@
  * a normal { ok: false, error } result rather than aborting the batch.
  */
 
-import { putBinarySource } from './daAdmin.js';
+import { putBinarySource, publishSource } from './daAdmin.js';
 import { ASSETS_FOLDER } from '../config.js';
 
 function folderForSite(siteUrl) {
@@ -29,18 +29,48 @@ function filenameForUrl(url, index) {
   }
 }
 
+/** Best-effort natural dimensions of an already-fetched image blob. */
+function readImageDimensions(blob) {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(blob);
+    const img = new Image();
+    const done = (dims) => { URL.revokeObjectURL(objectUrl); resolve(dims); };
+    img.onload = () => done({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => done({ width: null, height: null });
+    img.src = objectUrl;
+  });
+}
+
+/**
+ * Preview+publish the uploaded path so it resolves at the site's live
+ * delivery URL — the catalog sheet's `url` column needs a genuinely
+ * fetchable address, not the (auth-only) Source API path. Best-effort: a
+ * publish failure still leaves the image written and browsable, just
+ * without a catalog `url` value.
+ */
+async function deliveryUrl({
+  org, repo, ref, path, token,
+}) {
+  await publishSource({
+    org, repo, ref, path, token,
+  });
+  return `https://${ref}--${repo}--${org}.aem.live${path}`;
+}
+
 /**
  * @param {string[]} sourceUrls
  * @param {object} ctx
  * @param {string} ctx.token   DA SDK bearer token
  * @param {string} ctx.org
  * @param {string} ctx.repo
+ * @param {string} ctx.ref     Branch ref to preview/publish onto (default 'main')
  * @param {string} ctx.siteUrl Source page URL the images were scraped from
- * @yields {object} per-image result — { sourceUrl, ok, path?, error? }
+ * @yields {object} per-image result — { sourceUrl, ok, path?, url?, width?,
+ *   height?, brand?, label?, error? }
  */
 export async function* uploadImagesToDa(sourceUrls, ctx) {
   const {
-    token, org, repo, siteUrl,
+    token, org, repo, ref, siteUrl,
   } = ctx || {};
   if (!token) throw new Error('uploadImagesToDa: missing token');
   if (!org || !repo) throw new Error('uploadImagesToDa: missing org/repo');
@@ -63,7 +93,23 @@ export async function* uploadImagesToDa(sourceUrls, ctx) {
       await putBinarySource({
         org, repo, path, token, blob, filename,
       });
-      yield { sourceUrl, ok: true, path };
+      // eslint-disable-next-line no-await-in-loop
+      const [{ width, height }, url] = await Promise.all([
+        readImageDimensions(blob),
+        deliveryUrl({
+          org, repo, ref: ref || 'main', path, token,
+        }).catch(() => ''),
+      ]);
+      yield {
+        sourceUrl,
+        ok: true,
+        path,
+        url,
+        width,
+        height,
+        brand: folder,
+        label: filename.replace(/\.[^./]+$/, ''),
+      };
     } catch (err) {
       yield { sourceUrl, ok: false, error: (err && err.message) || String(err) };
     }

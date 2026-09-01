@@ -19,6 +19,7 @@ import { openScrapeModal } from '../lib/scrapeModal.js';
 import { mountAssetBrowser } from '../lib/assetBrowser.js';
 import { track, EVENTS } from '../lib/analytics.js';
 import { saveCachedImages } from '../lib/imageCache.js';
+import { appendCatalogRows } from '../lib/assetsCatalog.js';
 import { ASSETS_FOLDER } from '../config.js';
 
 // Most SVGs a scrape turns up are decorative iconography/logos (nav icons,
@@ -95,6 +96,7 @@ export function renderImagesTab(container, ctx) {
               token: ctx.token,
               org: ctx.org,
               repo: ctx.repo,
+              ref: ctx.ref,
               siteUrl,
             })) {
               done += 1;
@@ -107,6 +109,25 @@ export function renderImagesTab(container, ctx) {
                 // Persist after every successful item, not just at the end —
                 // a failed later item shouldn't lose progress already made.
                 saveCachedImages({ org: ctx.org, repo: ctx.repo, images: state.images });
+                // Record the import in the shared assets-catalog sheet —
+                // best-effort, a catalog write failure shouldn't drop an
+                // otherwise-successful upload.
+                appendCatalogRows({
+                  org: ctx.org,
+                  repo: ctx.repo,
+                  token: ctx.token,
+                  rows: [{
+                    id: result.path,
+                    url: result.url || '',
+                    thumbnail: result.url || '',
+                    label: result.label || '',
+                    tags: result.brand || '',
+                    width: result.width || '',
+                    height: result.height || '',
+                    brand: result.brand || '',
+                    path: result.path,
+                  }],
+                }).catch((err) => toast(`Catalog update failed: ${(err && err.message) || err}`, true));
               } else {
                 failed += 1;
               }

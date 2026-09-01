@@ -54,3 +54,9 @@ export const TEXTS_PATH = '/.da/demo-pilot/texts.json';
 // lib/uploadImages.js. Replaces the old AEM DAM upload flow (uploadAssets.js
 // + UPLOAD_TO_DAM_ACTION_URL above): images now live in DA itself.
 export const ASSETS_FOLDER = '/assets/images';
+
+// Catalog sheet (DA multi-sheet doc, single tab "data") recording metadata
+// for every image imported into ASSETS_FOLDER — id/url/thumbnail/label/tags/
+// width/height/brand/path columns. See lib/assetsCatalog.js.
+export const CATALOG_PATH = '/config/assets-catalog.json';
+export const CATALOG_SHEET_NAME = 'data';
