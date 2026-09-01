@@ -299,16 +299,14 @@ body {
   position: absolute;
   bottom: 6px;
   right: 6px;
-  width: 22px;
-  height: 22px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid #1473e6;
-  border-radius: 50%;
-  background: #fff;
-  color: #1473e6;
+  border-radius: 37%;
   cursor: pointer;
 }
 
