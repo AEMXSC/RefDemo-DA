@@ -89,6 +89,11 @@ export async function* uploadImagesToDa(sourceUrls, ctx) {
       if (!resp.ok) throw new Error(`image fetch failed: HTTP ${resp.status}`);
       // eslint-disable-next-line no-await-in-loop
       const blob = await resp.blob();
+      // Guards against SVGs that dodge imagesTab's isSvg() URL check (e.g. a
+      // path with no ".svg" extension that actually serves SVG bytes) —
+      // without this they'd be written with a raster filename/extension and
+      // fail to decode later, at copy time, with no way to tell why.
+      if (blob.type === 'image/svg+xml') throw new Error('SVG image — not imported');
       const filename = filenameForUrl(sourceUrl, i);
       const path = `${ASSETS_FOLDER}/${folder}/${filename}`;
       // eslint-disable-next-line no-await-in-loop

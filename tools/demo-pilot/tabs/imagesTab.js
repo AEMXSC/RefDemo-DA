@@ -25,6 +25,10 @@ import { ASSETS_FOLDER } from '../config.js';
 // excluded by default rather than uploading dozens of icons alongside the
 // handful of real images.
 function isSvg(url) {
+  // data: URIs (icon sets frequently inline SVGs this way) parse fine as a
+  // URL but their .pathname is the encoded payload, never ending in ".svg"
+  // — check the declared mime type directly instead.
+  if (/^data:image\/svg\+xml/i.test(url || '')) return true;
   try { return new URL(url).pathname.toLowerCase().endsWith('.svg'); } catch (_) { return /\.svg(\?|$)/i.test(url || ''); }
 }
 

@@ -8,6 +8,12 @@
  * Thumbnails and picks both go through an authenticated Source API GET
  * (getBinarySource) rather than a plain <img src>, because DA's Source API
  * requires the Authorization bearer header that an <img> tag can't send.
+ *
+ * UI mirrors AEM's own Assets "Files & Folders" browser: a breadcrumb trail
+ * (rootPath down to the current folder, each segment clickable) instead of
+ * a single "Up" button, tile cards with a big thumb + name/icon label
+ * underneath, and a search box that filters the current folder's items by
+ * name — all client-side, since a folder here is at most a few dozen items.
  */
 
 import { listSource, getBinarySource } from './daAdmin.js';
@@ -26,6 +32,12 @@ function toBarePath(path, org, repo) {
   return path.startsWith(prefix) ? (path.slice(prefix.length) || '/') : path;
 }
 
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
 /**
  * @param {HTMLElement} mount
  * @param {object} opts
@@ -38,52 +50,40 @@ function toBarePath(path, org, repo) {
 export async function mountAssetBrowser(mount, {
   org, repo, token, rootPath, onAssetPick,
 }) {
-  async function renderFolder(path) {
-    mount.innerHTML = '<p class="dp-status">Loading…</p>';
-    let items;
-    try {
-      const listed = await listSource({
-        org, repo, path, token,
-      });
-      items = listed.map((item) => ({ ...item, path: toBarePath(item.path, org, repo) }));
-    } catch (err) {
-      mount.innerHTML = `<p class="dp-error">${(err && err.message) || 'Could not list folder.'}</p>`;
-      return;
-    }
+  mount.innerHTML = `
+    <input type="text" id="dp-browser-search" class="dp-text-input dp-browser-search" placeholder="Search this folder…" autocomplete="off" />
+    <div class="dp-breadcrumb" id="dp-browser-breadcrumb"></div>
+    <div class="dp-grid dp-tile-grid" id="dp-browser-grid"></div>
+  `;
+  const searchInput = mount.querySelector('#dp-browser-search');
+  const breadcrumbEl = mount.querySelector('#dp-browser-breadcrumb');
+  const grid = mount.querySelector('#dp-browser-grid');
 
-    const canGoUp = path !== rootPath;
-    mount.innerHTML = `
-      <div class="dp-row">
-        ${canGoUp ? '<sl-button id="dp-browser-up">← Up</sl-button>' : ''}
-        <span class="dp-status">${path}</span>
-      </div>
-      <div class="dp-grid" id="dp-browser-grid"></div>
-    `;
+  let currentItems = [];
+  let renderFolder;
 
-    if (canGoUp) {
-      mount.querySelector('#dp-browser-up').addEventListener('click', () => {
-        const parent = path.split('/').slice(0, -1).join('/') || '/';
-        // Never go above rootPath (ASSETS_FOLDER) — it's the browser's root.
-        renderFolder(parent.startsWith(rootPath) ? parent : rootPath);
-      });
-    }
-
-    const grid = mount.querySelector('#dp-browser-grid');
+  function renderTiles(items) {
+    grid.innerHTML = '';
     if (!items.length) {
       grid.innerHTML = '<p class="dp-status">Empty folder.</p>';
       return;
     }
-
     items.forEach((item) => {
       const card = document.createElement('div');
-      card.className = 'dp-card';
+      card.className = 'dp-tile';
       if (isFolder(item)) {
-        card.innerHTML = `<div class="dp-folder">📁 ${item.name}</div>`;
+        card.innerHTML = `
+          <div class="dp-tile-thumb"><span class="dp-folder-icon">📁</span></div>
+          <div class="dp-tile-label"><span class="dp-tile-icon">📁</span><span class="dp-tile-name">${escapeHtml(item.name)}</span></div>
+        `;
         card.addEventListener('click', () => renderFolder(item.path));
       } else {
         card.innerHTML = `
-          <img alt="${item.name}" loading="lazy" />
-          <sl-button class="dp-copy-btn">Copy</sl-button>
+          <div class="dp-tile-thumb">
+            <img alt="${escapeHtml(item.name)}" loading="lazy" />
+            <sl-button class="dp-copy-btn">Copy</sl-button>
+          </div>
+          <div class="dp-tile-label"><span class="dp-tile-icon">🖼️</span><span class="dp-tile-name">${escapeHtml(item.name)}</span></div>
         `;
         const imgEl = card.querySelector('img');
         getBinarySource({
@@ -91,11 +91,63 @@ export async function mountAssetBrowser(mount, {
         })
           .then((blob) => { imgEl.src = URL.createObjectURL(blob); })
           .catch(() => { /* thumbnail best-effort only */ });
-        card.querySelector('.dp-copy-btn').addEventListener('click', () => onAssetPick(item.path, item));
+        card.querySelector('.dp-copy-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          onAssetPick(item.path, item);
+        });
       }
       grid.appendChild(card);
     });
   }
+
+  function renderBreadcrumb(path) {
+    const rootSegs = rootPath.split('/').filter(Boolean);
+    const pathSegs = path.split('/').filter(Boolean);
+    const rootLabel = rootSegs[rootSegs.length - 1] || 'Assets';
+    const rel = pathSegs.slice(rootSegs.length);
+
+    const crumbs = [{ label: rootLabel, path: rootPath }];
+    let acc = rootPath;
+    rel.forEach((seg) => {
+      acc = `${acc}/${seg}`;
+      crumbs.push({ label: seg, path: acc });
+    });
+
+    breadcrumbEl.innerHTML = crumbs.map((c, idx) => {
+      const isLast = idx === crumbs.length - 1;
+      const sep = isLast ? '' : '<span class="dp-breadcrumb-sep">›</span>';
+      return `<span class="dp-breadcrumb-seg${isLast ? ' is-current' : ''}" data-path="${escapeHtml(c.path)}">${escapeHtml(c.label)}</span>${sep}`;
+    }).join('');
+
+    breadcrumbEl.querySelectorAll('.dp-breadcrumb-seg:not(.is-current)').forEach((el) => {
+      el.addEventListener('click', () => renderFolder(el.getAttribute('data-path')));
+    });
+  }
+
+  renderFolder = async function loadFolder(path) {
+    grid.innerHTML = '<p class="dp-status">Loading…</p>';
+    let items;
+    try {
+      const listed = await listSource({
+        org, repo, path, token,
+      });
+      items = listed.map((item) => ({ ...item, path: toBarePath(item.path, org, repo) }));
+    } catch (err) {
+      grid.innerHTML = `<p class="dp-error">${(err && err.message) || 'Could not list folder.'}</p>`;
+      return;
+    }
+
+    currentItems = items;
+    renderBreadcrumb(path);
+    searchInput.value = '';
+    renderTiles(items);
+  };
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) { renderTiles(currentItems); return; }
+    renderTiles(currentItems.filter((item) => item.name.toLowerCase().includes(q)));
+  });
 
   await renderFolder(rootPath);
 }
