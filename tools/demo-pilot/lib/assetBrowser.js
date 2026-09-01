@@ -38,6 +38,34 @@ function escapeHtml(str) {
   }[c]));
 }
 
+// Large gradient folder glyph for a folder tile's thumb area.
+const FOLDER_ICON_LARGE = `
+  <svg viewBox="0 0 64 52" class="dp-folder-icon" aria-hidden="true">
+    <defs>
+      <linearGradient id="dp-folder-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#7b5cd6" />
+        <stop offset="45%" stop-color="#e0607e" />
+        <stop offset="100%" stop-color="#4f9bf0" />
+      </linearGradient>
+    </defs>
+    <path d="M2 6a2 2 0 0 1 2-2h14l6 6h34a2 2 0 0 1 2 2v36a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2Z" fill="url(#dp-folder-grad)" />
+  </svg>
+`;
+
+// Small outline folder glyph for the "FOLDER" meta row.
+const FOLDER_ICON_SMALL = `
+  <svg viewBox="0 0 20 16" class="dp-tile-meta-icon" aria-hidden="true">
+    <path d="M1 3a1 1 0 0 1 1-1h4.5l2 2H18a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+  </svg>
+`;
+
+const COPY_ICON = `
+  <svg viewBox="0 0 16 16" aria-hidden="true">
+    <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3" />
+    <path d="M3 10.5V3a1 1 0 0 1 1-1h7.5" fill="none" stroke="currentColor" stroke-width="1.3" />
+  </svg>
+`;
+
 /**
  * @param {HTMLElement} mount
  * @param {object} opts
@@ -75,24 +103,37 @@ export async function mountAssetBrowser(mount, {
       card.className = 'dp-tile';
       if (isFolder(item)) {
         card.innerHTML = `
-          <div class="dp-tile-thumb"><span class="dp-folder-icon">📁</span></div>
-          <div class="dp-tile-label"><span class="dp-tile-icon">📁</span><span class="dp-tile-name">${escapeHtml(item.name)}</span></div>
+          <div class="dp-tile-thumb">${FOLDER_ICON_LARGE}</div>
+          <div class="dp-tile-label">
+            <span class="dp-tile-name">${escapeHtml(item.name)}</span>
+            <span class="dp-tile-meta">${FOLDER_ICON_SMALL}FOLDER</span>
+          </div>
         `;
         card.addEventListener('click', () => renderFolder(item.path));
       } else {
         card.innerHTML = `
           <div class="dp-tile-thumb">
             <img alt="${escapeHtml(item.name)}" loading="lazy" />
-            <sl-button class="dp-copy-btn">Copy</sl-button>
+            <button type="button" class="dp-copy-btn" title="Copy" aria-label="Copy">${COPY_ICON}</button>
           </div>
-          <div class="dp-tile-label"><span class="dp-tile-icon">🖼️</span><span class="dp-tile-name">${escapeHtml(item.name)}</span></div>
+          <div class="dp-tile-label">
+            <span class="dp-tile-name">${escapeHtml(item.name)}</span>
+            <span class="dp-tile-meta dp-tile-dims"></span>
+          </div>
         `;
         const imgEl = card.querySelector('img');
+        const dimsEl = card.querySelector('.dp-tile-dims');
         getBinarySource({
           org, repo, path: item.path, token,
         })
-          .then((blob) => { imgEl.src = URL.createObjectURL(blob); })
-          .catch(() => { /* thumbnail best-effort only */ });
+          .then((blob) => {
+            const objectUrl = URL.createObjectURL(blob);
+            imgEl.src = objectUrl;
+            const probe = new Image();
+            probe.onload = () => { dimsEl.textContent = `${probe.naturalWidth} x ${probe.naturalHeight}`; };
+            probe.src = objectUrl;
+          })
+          .catch(() => { /* thumbnail/dimensions best-effort only */ });
         card.querySelector('.dp-copy-btn').addEventListener('click', (e) => {
           e.stopPropagation();
           onAssetPick(item.path, item);

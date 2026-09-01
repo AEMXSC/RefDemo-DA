@@ -262,20 +262,17 @@ body {
 }
 
 .dp-folder-icon {
-  font-size: 40px;
+  width: 44px;
+  height: auto;
 }
 
 .dp-tile-label {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
   padding: 8px;
   font-size: 12.5px;
   border-top: 1px solid #eee;
-}
-
-.dp-tile-label .dp-tile-icon {
-  flex: 0 0 auto;
 }
 
 .dp-tile-label .dp-tile-name {
@@ -284,8 +281,38 @@ body {
   white-space: nowrap;
 }
 
+.dp-tile-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #777;
+  font-size: 11px;
+}
+
+.dp-tile-meta-icon {
+  width: 13px;
+  height: auto;
+  flex: 0 0 auto;
+}
+
 .dp-tile .dp-copy-btn {
   position: absolute;
   bottom: 6px;
   right: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #1473e6;
+  border-radius: 50%;
+  background: #fff;
+  color: #1473e6;
+  cursor: pointer;
+}
+
+.dp-tile .dp-copy-btn svg {
+  width: 12px;
+  height: 12px;
 }
