@@ -91,13 +91,11 @@ export function renderImagesTab(container, ctx) {
                   rows: [{
                     id: result.path,
                     url: result.url || '',
-                    thumbnail: result.url || '',
+                    thumb: result.url || '',
                     label: result.label || '',
                     tags: result.brand || '',
-                    width: result.width || '',
-                    height: result.height || '',
-                    brand: result.brand || '',
                     path: result.path,
+                    brand: result.brand || '',
                   }],
                 }).catch((err) => toast(`Catalog update failed: ${(err && err.message) || err}`, true));
               } else {

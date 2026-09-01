@@ -1,8 +1,8 @@
 /*
  * assetsCatalog — appends metadata for each image imported into
  * ASSETS_FOLDER to a DA sheet (/config/assets-catalog, tab "data"), matching
- * the id/url/thumbnail/label/tags/width/height/brand/path schema of that
- * sheet. Read-modify-write via DA's Source API (lib/daAdmin.js) — same
+ * the id/url/thumb/label/tags/path/brand schema of that sheet. Read-modify-write
+ * via DA's Source API (lib/daAdmin.js) — same
  * pattern as lib/theme.js's saved-theme sheets, just multi-sheet shaped
  * (":type": "multi-sheet") instead of single-sheet, to match the sheet's
  * existing tab structure.
@@ -11,14 +11,14 @@
 import { getSource, putJsonSource } from './daAdmin.js';
 import { CATALOG_PATH, CATALOG_SHEET_NAME } from '../config.js';
 
-const COLUMNS = ['id', 'url', 'thumbnail', 'label', 'tags', 'width', 'height', 'brand', 'path'];
+const COLUMNS = ['id', 'url', 'thumb', 'label', 'tags', 'path', 'brand'];
 
 function emptyWorkbook() {
   return {
     ':names': [CATALOG_SHEET_NAME],
     ':type': 'multi-sheet',
     [CATALOG_SHEET_NAME]: {
-      total: 0, limit: 0, offset: 0, data: [],
+      total: 0, limit: 0, offset: 0, data: [], columns: COLUMNS,
     },
   };
 }
@@ -45,6 +45,9 @@ export async function appendCatalogRows({
   sheet.data = [...(sheet.data || []), ...entries.map(normalizeRow)];
   sheet.total = sheet.data.length;
   sheet.limit = sheet.total;
+  // Always present, even when appending to a sheet an earlier bug wrote
+  // without one — a sheet with no `columns` renders with no header row.
+  sheet.columns = COLUMNS;
   workbook[':names'] = [CATALOG_SHEET_NAME];
   workbook[':type'] = 'multi-sheet';
 
