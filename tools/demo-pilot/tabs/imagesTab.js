@@ -56,7 +56,7 @@ export function renderImagesTab(container, ctx) {
           <sl-button id="dp-images-import">Import from URL</sl-button>
         </div>
         <p class="dp-status" id="dp-images-status"></p>
-        <div class="dp-row" style="margin-top:16px;"><strong>Browse assets folder</strong></div>
+        <div class="dp-row"><p>Browse assets folder</p></div>
         <p class="dp-error" id="dp-selector-error"></p>
         <div id="dp-asset-selector-mount" class="dp-browser-mount"></div>
       </div>
