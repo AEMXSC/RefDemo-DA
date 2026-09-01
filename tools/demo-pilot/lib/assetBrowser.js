@@ -16,6 +16,16 @@ function isFolder(item) {
   return !item.ext;
 }
 
+// The List API returns each item's `path` prefixed with /{org}/{repo} (see
+// https://docs.da.live/developers/api/list), but every other call here
+// (listSource/getBinarySource/onAssetPick -> Source API) takes a bare path
+// and prepends org/repo itself. Strip it once, right after listing, so
+// folder navigation and thumbnail/copy lookups don't double-prefix.
+function toBarePath(path, org, repo) {
+  const prefix = `/${org}/${repo}`;
+  return path.startsWith(prefix) ? (path.slice(prefix.length) || '/') : path;
+}
+
 /**
  * @param {HTMLElement} mount
  * @param {object} opts
@@ -32,9 +42,10 @@ export async function mountAssetBrowser(mount, {
     mount.innerHTML = '<p class="dp-status">Loading…</p>';
     let items;
     try {
-      items = await listSource({
+      const listed = await listSource({
         org, repo, path, token,
       });
+      items = listed.map((item) => ({ ...item, path: toBarePath(item.path, org, repo) }));
     } catch (err) {
       mount.innerHTML = `<p class="dp-error">${(err && err.message) || 'Could not list folder.'}</p>`;
       return;
@@ -51,8 +62,9 @@ export async function mountAssetBrowser(mount, {
 
     if (canGoUp) {
       mount.querySelector('#dp-browser-up').addEventListener('click', () => {
-        const parent = path.split('/').slice(0, -1).join('/');
-        renderFolder(parent.length >= rootPath.length ? parent : rootPath);
+        const parent = path.split('/').slice(0, -1).join('/') || '/';
+        // Never go above rootPath (ASSETS_FOLDER) — it's the browser's root.
+        renderFolder(parent.startsWith(rootPath) ? parent : rootPath);
       });
     }
 

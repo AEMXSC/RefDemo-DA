@@ -29,6 +29,17 @@ function normalizeRow(row) {
   return out;
 }
 
+// The sheet's own header lives in `data[0]` as a literal row (column name ->
+// column name), not just in the `columns` field — some da.live sheet
+// renders derive the header from that first row. Must survive every write,
+// including a fallback to emptyWorkbook() when getSource() failed to return
+// the real sheet.
+function headerRow() {
+  const out = {};
+  COLUMNS.forEach((col) => { out[col] = col; });
+  return out;
+}
+
 /** Append one or more rows to the shared assets catalog sheet. */
 export async function appendCatalogRows({
   org, repo, token, rows,
@@ -42,7 +53,11 @@ export async function appendCatalogRows({
   const workbook = (existing && existing[CATALOG_SHEET_NAME]) ? existing : emptyWorkbook();
   const sheet = workbook[CATALOG_SHEET_NAME];
 
-  sheet.data = [...(sheet.data || []), ...entries.map(normalizeRow)];
+  const priorData = sheet.data || [];
+  // Retain the header row irrespective of what came back from getSource —
+  // insert it if the sheet didn't have one yet (e.g. a fresh/fallback sheet).
+  const withHeader = priorData.length && priorData[0].id === 'id' ? priorData : [headerRow(), ...priorData];
+  sheet.data = [...withHeader, ...entries.map(normalizeRow)];
   sheet.total = sheet.data.length;
   sheet.limit = sheet.total;
   // Always present, even when appending to a sheet an earlier bug wrote

@@ -15,7 +15,7 @@ import { putRemoteBinarySource, publishSource } from './daAdmin.js';
 import { ASSETS_FOLDER } from '../config.js';
 
 function folderForSite(siteUrl) {
-  try { return new URL(siteUrl).host.replace(/^www\./, ''); } catch (_) { return 'unknown-site'; }
+  try { return new URL(siteUrl).host.replace(/^www\./, '').replace(/\./g, '-'); } catch (_) { return 'unknown-site'; }
 }
 
 function filenameForUrl(url, index) {
