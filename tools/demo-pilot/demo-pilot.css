@@ -307,7 +307,37 @@ body {
   justify-content: center;
   border: 1px solid #1473e6;
   border-radius: 37%;
+  background: #fff;
   cursor: pointer;
+  transition: transform 100ms ease, background 150ms ease;
+}
+
+.dp-tile .dp-copy-btn:active {
+  transform: scale(0.85);
+}
+
+.dp-tile .dp-copy-btn.is-copied {
+  animation: dp-copy-pulse 500ms ease;
+}
+
+@keyframes dp-copy-pulse {
+  0% {
+    transform: scale(1);
+    border-color: #1473e6;
+    background: #fff;
+  }
+
+  30% {
+    transform: scale(1.25);
+    border-color: #2d9d78;
+    background: #e6f6ee;
+  }
+
+  100% {
+    transform: scale(1);
+    border-color: #1473e6;
+    background: #fff;
+  }
 }
 
 .dp-tile .dp-copy-btn svg {

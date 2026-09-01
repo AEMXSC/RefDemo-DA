@@ -134,8 +134,15 @@ export async function mountAssetBrowser(mount, {
             probe.src = objectUrl;
           })
           .catch(() => { /* thumbnail/dimensions best-effort only */ });
-        card.querySelector('.dp-copy-btn').addEventListener('click', (e) => {
+        const copyBtn = card.querySelector('.dp-copy-btn');
+        copyBtn.addEventListener('click', (e) => {
           e.stopPropagation();
+          copyBtn.classList.remove('is-copied');
+          // Force a reflow so re-triggering the animation on a rapid second
+          // click restarts it instead of being a no-op (class already set).
+          // eslint-disable-next-line no-void
+          void copyBtn.offsetWidth;
+          copyBtn.classList.add('is-copied');
           onAssetPick(item.path, item);
         });
       }
