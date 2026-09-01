@@ -68,29 +68,30 @@ export async function putJsonSource({
 }
 
 /**
- * Create/overwrite a binary file (e.g. an image) via the Source API, having
- * DA fetch the bytes itself from a remote URL. Used by lib/uploadImages.js
- * to write scraped images into the DA site's own /assets/images folder
- * instead of AEM DAM — fetching server-side (rather than a client-side
- * fetch(sourceUrl) + multipart upload) avoids CORS failures on source sites
- * that don't send CORS headers on their image responses.
+ * Create/overwrite a binary file (e.g. an image) via the Source API. Used by
+ * lib/uploadImages.js to write scraped images into the DA site's own
+ * /assets/images folder instead of AEM DAM.
+ *
+ * A prior version of this tried a JSON body ({ source: { type: 'url', url }})
+ * so DA would fetch a remote sourceUrl itself, sidestepping the CORS problem
+ * below — the Source API accepted the request but never actually wrote a
+ * resolvable resource (the delivered path 404'd with "S3: Not Found"), so
+ * that shape isn't real API surface. Real bytes, fetched by the caller, are
+ * the only documented way to create a binary file here.
  */
-export async function putRemoteBinarySource({
-  org, repo, path, token, sourceUrl, title, alt, tags,
+export async function putBinarySource({
+  org, repo, path, token, blob, filename,
 }) {
+  const body = new FormData();
+  body.append('data', blob, filename || path.split('/').pop());
   const resp = await fetch(sourcePath(org, repo, path), {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      path,
-      title,
-      source: { type: 'url', url: sourceUrl },
-      metadata: { alt, tags },
-    }),
+    headers: { Authorization: `Bearer ${token}` },
+    body,
   });
   if (!resp.ok) {
     const text = await resp.text().catch(() => '');
-    throw new Error(`putRemoteBinarySource ${path} -> HTTP ${resp.status} ${text.slice(0, 200)}`);
+    throw new Error(`putBinarySource ${path} -> HTTP ${resp.status} ${text.slice(0, 200)}`);
   }
 }
 
