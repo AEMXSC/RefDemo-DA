@@ -51,8 +51,10 @@ export async function mountAssetBrowser(mount, {
   org, repo, token, rootPath, onAssetPick,
 }) {
   mount.innerHTML = `
-    <input type="text" id="dp-browser-search" class="dp-text-input dp-browser-search" placeholder="Search this folder…" autocomplete="off" />
-    <div class="dp-breadcrumb" id="dp-browser-breadcrumb"></div>
+    <div class="dp-browser-sticky">
+      <input type="text" id="dp-browser-search" class="dp-text-input dp-browser-search" placeholder="Search this folder…" autocomplete="off" />
+      <div class="dp-breadcrumb" id="dp-browser-breadcrumb"></div>
+    </div>
     <div class="dp-grid dp-tile-grid" id="dp-browser-grid"></div>
   `;
   const searchInput = mount.querySelector('#dp-browser-search');
