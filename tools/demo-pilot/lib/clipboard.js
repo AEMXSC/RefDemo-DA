@@ -9,6 +9,7 @@
  */
 
 import { GET_DAM_ASSET_ACTION_URL } from '../config.js';
+import { getBinarySource } from './daAdmin.js';
 
 // Clipboard image writes are commonly restricted to image/png across browsers,
 // so any other source mimetype (jpg/webp/svg) is re-encoded via a canvas
@@ -63,14 +64,18 @@ function base64ToBlob(base64, contentType) {
  * and, even pointed at the right host, AEM Author generally isn't CORS-open
  * to arbitrary browser origins. The action fetches server-side instead.
  */
-export async function copyDamAssetToClipboard({ assetPath, authorUrl, orgId, token }) {
+export async function copyDamAssetToClipboard({
+  assetPath, authorUrl, orgId, token,
+}) {
   if (!GET_DAM_ASSET_ACTION_URL) throw new Error('GET_DAM_ASSET_ACTION_URL not configured');
   if (!assetPath) throw new Error('missing assetPath');
   if (!authorUrl) throw new Error('missing authorUrl');
   const resp = await fetch(GET_DAM_ASSET_ACTION_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ authorUrl, assetPath, orgId, bearer: token }),
+    body: JSON.stringify({
+      authorUrl, assetPath, orgId, bearer: token,
+    }),
   });
   const text = await resp.text();
   let json;
@@ -82,6 +87,25 @@ export async function copyDamAssetToClipboard({ assetPath, authorUrl, orgId, tok
   const { contentType, base64 } = (json && json.body) || json || {};
   if (!base64) throw new Error('get-dam-asset: invalid response');
   const rawBlob = base64ToBlob(base64, contentType || 'application/octet-stream');
+  const pngBlob = await toPngBlob(rawBlob);
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+}
+
+/**
+ * Place a DA-hosted image (Source API path under /assets/images, e.g.
+ * /assets/images/ikea.com/foo.jpg) on the clipboard as PNG. Same rationale as
+ * copyDamAssetToClipboard — a plain <img>/fetch() can't send the
+ * Authorization header the Source API needs — but here the fetch goes
+ * straight to admin.da.live from the browser (see lib/daAdmin.js), no
+ * backend action required.
+ */
+export async function copyDaAssetToClipboard({
+  assetPath, org, repo, token,
+}) {
+  if (!assetPath) throw new Error('missing assetPath');
+  const rawBlob = await getBinarySource({
+    org, repo, path: assetPath, token,
+  });
   const pngBlob = await toPngBlob(rawBlob);
   await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
 }

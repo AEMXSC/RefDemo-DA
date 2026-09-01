@@ -48,3 +48,9 @@ export const THEMES_FOLDER = '/themes';
 // Scraped-texts cache — a plain JSON doc under a hidden project folder
 // (mirrors the old /var/text-storage/{slug} JCR node, minus JCR).
 export const TEXTS_PATH = '/.da/demo-pilot/texts.json';
+
+// Root folder (in this DA site, via the Source API) that scraped images are
+// written into, one subfolder per scraped site's hostname — see
+// lib/uploadImages.js. Replaces the old AEM DAM upload flow (uploadAssets.js
+// + UPLOAD_TO_DAM_ACTION_URL above): images now live in DA itself.
+export const ASSETS_FOLDER = '/assets/images';

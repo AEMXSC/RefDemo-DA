@@ -29,7 +29,9 @@ function listPath(org, repo, path) {
  * otherwise, or `null` on a 404 ("doesn't exist yet" — never throws for that
  * case so callers don't need a try/catch on first run).
  */
-export async function getSource({ org, repo, path, token }) {
+export async function getSource({
+  org, repo, path, token,
+}) {
   const resp = await fetch(sourcePath(org, repo, path), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -47,7 +49,9 @@ export async function getSource({ org, repo, path, token }) {
  * Create/overwrite a JSON file via the Source API. `json` is stringified and
  * posted as multipart/form-data, per the Source API's file-create contract.
  */
-export async function putJsonSource({ org, repo, path, token, json }) {
+export async function putJsonSource({
+  org, repo, path, token, json,
+}) {
   const body = new FormData();
   body.append('data', new Blob([JSON.stringify(json)], { type: 'application/json' }), 'data.json');
   const resp = await fetch(sourcePath(org, repo, path), {
@@ -63,7 +67,46 @@ export async function putJsonSource({ org, repo, path, token, json }) {
   try { return text ? JSON.parse(text) : null; } catch (_) { return null; }
 }
 
-export async function deleteSource({ org, repo, path, token }) {
+/**
+ * Create/overwrite a binary file (e.g. an image) via the Source API. Used by
+ * lib/uploadImages.js to write scraped images into the DA site's own
+ * /assets/images folder instead of AEM DAM.
+ */
+export async function putBinarySource({
+  org, repo, path, token, blob, filename,
+}) {
+  const body = new FormData();
+  body.append('data', blob, filename || path.split('/').pop());
+  const resp = await fetch(sourcePath(org, repo, path), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body,
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    throw new Error(`putBinarySource ${path} -> HTTP ${resp.status} ${text.slice(0, 200)}`);
+  }
+}
+
+/**
+ * GET a binary file's raw bytes. A plain <img src> can't hit this endpoint
+ * (it requires the Authorization bearer header), so callers build an object
+ * URL from the returned Blob for previews, or feed it straight to the
+ * clipboard (see lib/clipboard.js).
+ */
+export async function getBinarySource({
+  org, repo, path, token,
+}) {
+  const resp = await fetch(sourcePath(org, repo, path), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!resp.ok) throw new Error(`getBinarySource ${path} -> HTTP ${resp.status}`);
+  return resp.blob();
+}
+
+export async function deleteSource({
+  org, repo, path, token,
+}) {
   const resp = await fetch(sourcePath(org, repo, path), {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
@@ -74,7 +117,9 @@ export async function deleteSource({ org, repo, path, token }) {
 }
 
 /** List the children of a folder. Returns `[]` when the folder doesn't exist. */
-export async function listSource({ org, repo, path, token }) {
+export async function listSource({
+  org, repo, path, token,
+}) {
   const resp = await fetch(listPath(org, repo, path), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -90,7 +135,9 @@ export async function listSource({ org, repo, path, token }) {
  * page's runtime reads, so "apply to site" never needs to touch individual
  * pages the way the old CF + per-page `theme_cf_reference` fan-out did.
  */
-export async function publishSource({ org, repo, ref = 'main', path, token }) {
+export async function publishSource({
+  org, repo, ref = 'main', path, token,
+}) {
   const clean = path.replace(/^\/+/, '').replace(/\.json$/, '.json');
   const headers = { Authorization: `Bearer ${token}` };
   const preview = await fetch(`${EDS_ADMIN_ORIGIN}/preview/${org}/${repo}/${ref}/${clean}`, { method: 'POST', headers });
