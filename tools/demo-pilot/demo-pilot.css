@@ -191,28 +191,28 @@ body {
   position: relative;
 }
 
+.dp-import-footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 12px;
+  background: rgb(0 0 0 / 55%);
+}
+
 .dp-import-fab {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  z-index: 2;
-  width: 30px;
-  height: 30px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #1473e6;
-  border-radius: 50%;
-  background: #fff;
-  color: #1473e6;
+  border: none;
+  background: transparent;
+  color: #fff;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 20%);
 }
 
 .dp-import-fab svg {
-  width: 14px;
-  height: 14px;
+  width: 30px;
+  height: 30px;
 }
 
 .dp-browser-mount {
