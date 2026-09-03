@@ -205,9 +205,19 @@ body {
   align-items: center;
   justify-content: center;
   border: none;
+  border-radius: 50%;
   background: transparent;
   color: #3b63fb;
   cursor: pointer;
+  transition: background 150ms ease, transform 100ms ease;
+}
+
+.dp-import-fab:hover {
+   color: black;
+}
+
+.dp-import-fab:active {
+  transform: scale(0.88);
 }
 
 .dp-import-fab svg {
