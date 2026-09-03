@@ -30,7 +30,7 @@ export const GET_DAM_ASSET_ACTION_URL = 'https://3635370-966fuchsiacentipede.ado
 // image responses (common for hotlinked assets). See lib/uploadImages.js.
 // Not yet deployed — fill in after `aio app deploy`; uploadImagesToDa()
 // falls back to a direct client-side fetch while this is empty.
-export const FETCH_IMAGE_ACTION_URL = '';
+export const FETCH_IMAGE_ACTION_URL = 'https://675172-referencedemopartner-stage.adobeioruntime.net/api/v1/web/ref-demo-api-gateway/proxy-ss-cors-fetch';
 
 // IMS Organization ID for the AEM Cloud Service instance behind
 // aem.repositoryId (sent as x-gw-ims-org-id on Assets HTTP API calls — see
