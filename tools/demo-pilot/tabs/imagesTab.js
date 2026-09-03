@@ -58,12 +58,13 @@ export function renderImagesTab(container, ctx) {
         <div class="dp-row"><p>Browse assets folder</p></div>
         <p class="dp-error" id="dp-selector-error"></p>
         <div id="dp-asset-selector-mount" class="dp-browser-mount"></div>
-        <sl-button id="dp-images-import" class="dp-import-fab" title="Import from URL" aria-label="Import from URL">
+        <button type="button" id="dp-images-import" class="dp-import-fab" title="Import from URL" aria-label="Import from URL">
           <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M8 1v9M4.5 6.5 8 10l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-            <path d="M2 12.5v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            <path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h4l2.5 2.5V12.5A1.5 1.5 0 0 1 9 14H4a1.5 1.5 0 0 1-1.5-1.5Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+            <path d="M8 2v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+            <path d="M2.7 8h5.1M5.5 5.8 8 8l-2.5 2.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-        </sl-button>
+        </button>
       </div>
     `;
 
