@@ -196,7 +196,7 @@ body {
   display: flex;
   justify-content: flex-end;
   padding: 6px 12px;
-  background: rgb(0 0 0 / 55%);
+  background: transparent;
 }
 
 .dp-import-fab {
@@ -206,7 +206,7 @@ body {
   justify-content: center;
   border: none;
   background: transparent;
-  color: #fff;
+  color: #3b63fb;
   cursor: pointer;
 }
 
