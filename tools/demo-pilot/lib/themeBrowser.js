@@ -4,15 +4,19 @@
  * subfolder and preview/apply one of its saved brand-theme structured
  * content docs. Same breadcrumb + search + tile UI as lib/assetBrowser.js
  * (image import), reusing its folder/breadcrumb primitives, but a file tile
- * here previews the theme's colors as swatches (fetched via getSource,
- * since these are small JSON docs, not binaries) and has an "Apply" action
- * instead of Copy — picking one just records its path, via onApply.
+ * here previews the theme's colors as swatches — fetched via the DA
+ * structured-content preview worker (DA_STRUCTURED_CONTENT_ORIGIN), which
+ * resolves a structured-content doc to its rendered JSON values, unlike the
+ * Source API's getSource which returns the raw (unresolved) doc — and has
+ * an "Apply" action instead of Copy: picking one just records its path,
+ * via onApply.
  */
 
-import { getSource, listSource } from './daAdmin.js';
+import { listSource } from './daAdmin.js';
 import {
   isFolder, toBarePath, escapeHtml, FOLDER_ICON_LARGE, FOLDER_ICON_SMALL,
 } from './assetBrowser.js';
+import { DA_STRUCTURED_CONTENT_ORIGIN } from '../config.js';
 
 // Matches the "Brand Theme" JSON schema's color properties.
 const THEME_COLOR_FIELDS = [
@@ -20,12 +24,20 @@ const THEME_COLOR_FIELDS = [
   'brand-link-color', 'brand-link-hover-color', 'brand-text-color', 'brand-light-text-color',
 ];
 
-function swatchesHtml(fields) {
-  return THEME_COLOR_FIELDS
-    .map((f) => fields[f])
-    .filter(Boolean)
-    .map((hex) => `<span class="dp-swatch" style="background:${escapeHtml(hex)}" title="${escapeHtml(hex)}"></span>`)
-    .join('');
+function themeBandsHtml(fields) {
+  const hexes = THEME_COLOR_FIELDS.map((f) => fields[f]).filter(Boolean);
+  if (!hexes.length) return '<p class="dp-status">No colors</p>';
+  const bands = hexes.map((hex) => `<div class="dp-theme-band" style="background:${escapeHtml(hex)}"></div>`).join('');
+  const labels = hexes.map((hex) => `<span class="dp-theme-hex">${escapeHtml(hex.replace(/^#/, '').toUpperCase())}</span>`).join('');
+  return `<div class="dp-theme-bands">${bands}</div><div class="dp-theme-hex-row">${labels}</div>`;
+}
+
+/** Resolve a structured-content doc's rendered JSON values via the preview worker. */
+async function fetchStructuredContent(org, repo, path) {
+  const clean = path.startsWith('/') ? path : `/${path}`;
+  const resp = await fetch(`${DA_STRUCTURED_CONTENT_ORIGIN}/preview/${org}/${repo}${clean}`);
+  if (!resp.ok) throw new Error(`structured content fetch failed: HTTP ${resp.status}`);
+  return resp.json();
 }
 
 /**
@@ -74,24 +86,22 @@ export async function mountThemeBrowser(mount, {
         card.addEventListener('click', () => renderFolder(item.path));
       } else {
         card.innerHTML = `
-          <div class="dp-tile-thumb">
-            <div class="dp-swatches dp-theme-swatches"></div>
+          <div class="dp-tile-thumb dp-theme-tile-thumb">
+            <div class="dp-theme-preview"><p class="dp-status">Loading…</p></div>
             <button type="button" class="dp-apply-theme-btn" title="Apply" aria-label="Apply">Apply</button>
           </div>
           <div class="dp-tile-label">
             <span class="dp-tile-name">${escapeHtml(item.name)}</span>
           </div>
         `;
-        const swatchesEl = card.querySelector('.dp-theme-swatches');
+        const previewEl = card.querySelector('.dp-theme-preview');
         let fields = {};
-        getSource({
-          org, repo, path: item.path, token,
-        })
+        fetchStructuredContent(org, repo, item.path)
           .then((json) => {
             fields = (json && typeof json === 'object') ? json : {};
-            swatchesEl.innerHTML = swatchesHtml(fields) || '<span class="dp-status">No colors</span>';
+            previewEl.innerHTML = themeBandsHtml(fields);
           })
-          .catch(() => { swatchesEl.innerHTML = '<span class="dp-error">Could not load</span>'; });
+          .catch(() => { previewEl.innerHTML = '<span class="dp-error">Could not load</span>'; });
         card.querySelector('.dp-apply-theme-btn').addEventListener('click', (e) => {
           e.stopPropagation();
           onApply(item.path, fields, item);

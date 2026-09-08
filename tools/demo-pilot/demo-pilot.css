@@ -380,12 +380,44 @@ body {
   height: 12px;
 }
 
-.dp-theme-swatches {
+.dp-theme-tile-thumb {
+  height: auto;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  background: #fff;
+}
+
+.dp-theme-preview {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 10px;
-  justify-content: center;
+  flex-direction: column;
+  width: 100%;
+}
+
+.dp-theme-bands {
+  display: flex;
+  width: 100%;
+  height: 60px;
+}
+
+.dp-theme-band {
+  flex: 1 1 0;
+}
+
+.dp-theme-hex-row {
+  display: flex;
+  width: 100%;
+  padding: 6px 2px;
+}
+
+.dp-theme-hex {
+  flex: 1 1 0;
+  text-align: center;
+  font-size: 10px;
+  font-family: monospace;
+  color: #777;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dp-apply-theme-btn {

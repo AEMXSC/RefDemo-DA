@@ -47,6 +47,12 @@ export const DA_ADMIN_ORIGIN = 'https://admin.da.live';
 // EDS admin API origin (preview/live publish) for the single shared theme.json.
 export const EDS_ADMIN_ORIGIN = 'https://admin.hlx.page';
 
+// DA structured-content preview worker — resolves a structured-content doc
+// (e.g. a brand-theme JSON under THEMES_ASSETS_FOLDER) to its rendered JSON
+// values, unlike the Source API's getSource which returns the raw doc.
+// See lib/themeBrowser.js.
+export const DA_STRUCTURED_CONTENT_ORIGIN = 'https://da-sc.adobeaem.workers.dev';
+
 // Canonical site-wide theme file + saved-theme library folder — see
 // lib/theme.js. Both are plain DA sheets, no Content Fragments involved.
 export const THEME_PATH = '/theme.json';
