@@ -98,7 +98,9 @@ export async function mountThemeBrowser(mount, {
         let fields = {};
         fetchStructuredContent(org, repo, item.path)
           .then((json) => {
-            fields = (json && typeof json === 'object') ? json : {};
+            // Structured content comes back as { metadata, data: {...} } —
+            // the color fields live under `data`.
+            fields = (json && typeof json.data === 'object' && json.data) ? json.data : {};
             previewEl.innerHTML = themeBandsHtml(fields);
           })
           .catch(() => { previewEl.innerHTML = '<span class="dp-error">Could not load</span>'; });
