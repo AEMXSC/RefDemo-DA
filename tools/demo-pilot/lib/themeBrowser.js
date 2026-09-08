@@ -115,9 +115,19 @@ export async function mountThemeBrowser(mount, {
             if (myGeneration !== renderGeneration) return;
             previewEl.innerHTML = '<span class="dp-error">Could not load</span>';
           });
-        card.querySelector('.dp-apply-theme-btn').addEventListener('click', (e) => {
+        const applyBtn = card.querySelector('.dp-apply-theme-btn');
+        applyBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          onApply(item.path, fields, item);
+          if (applyBtn.disabled) return;
+          const originalLabel = applyBtn.textContent;
+          applyBtn.disabled = true;
+          applyBtn.innerHTML = '<span class="dp-btn-spinner" aria-hidden="true"></span>';
+          try {
+            await onApply(item.path, fields, item);
+          } finally {
+            applyBtn.disabled = false;
+            applyBtn.textContent = originalLabel;
+          }
         });
       }
       grid.appendChild(card);

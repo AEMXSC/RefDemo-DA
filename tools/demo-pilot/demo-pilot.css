@@ -441,3 +441,22 @@ body {
   background: rgb(20 115 230 / 20%);
   transform: scale(0.9);
 }
+
+.dp-apply-theme-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.dp-btn-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid rgb(20 115 230 / 30%);
+  border-top-color: #1473e6;
+  border-radius: 50%;
+  animation: dp-spin 600ms linear infinite;
+}
+
+@keyframes dp-spin {
+  to { transform: rotate(360deg); }
+}
