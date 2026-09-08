@@ -121,7 +121,7 @@ export async function mountThemeBrowser(mount, {
           if (applyBtn.disabled) return;
           const originalLabel = applyBtn.textContent;
           applyBtn.disabled = true;
-          applyBtn.innerHTML = '<span class="dp-btn-spinner" aria-hidden="true"></span>';
+          applyBtn.innerHTML = '<span class="dp-btn-spinner" aria-hidden="true"></span><span>Applying…</span>';
           try {
             await onApply(item.path, fields, item);
           } finally {
