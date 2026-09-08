@@ -124,7 +124,7 @@ export async function renderThemeTab(container, ctx) {
 
   const themes = state.themes || [];
   if (themes.length === 0) {
-    listEl.innerHTML = '<p class="dp-status">No saved themes yet. Import from a live URL to create one.</p>';
+    //listEl.innerHTML = '<p class="dp-status">No saved themes yet. Import from a live URL to create one.</p>';
   } else {
     listEl.innerHTML = '';
     themes.forEach((theme) => {
