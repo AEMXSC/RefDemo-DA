@@ -18,7 +18,7 @@
 
 import { listSource, getBinarySource } from './daAdmin.js';
 
-function isFolder(item) {
+export function isFolder(item) {
   return !item.ext;
 }
 
@@ -27,19 +27,19 @@ function isFolder(item) {
 // (listSource/getBinarySource/onAssetPick -> Source API) takes a bare path
 // and prepends org/repo itself. Strip it once, right after listing, so
 // folder navigation and thumbnail/copy lookups don't double-prefix.
-function toBarePath(path, org, repo) {
+export function toBarePath(path, org, repo) {
   const prefix = `/${org}/${repo}`;
   return path.startsWith(prefix) ? (path.slice(prefix.length) || '/') : path;
 }
 
-function escapeHtml(str) {
+export function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
 }
 
 // Large gradient folder glyph for a folder tile's thumb area.
-const FOLDER_ICON_LARGE = `
+export const FOLDER_ICON_LARGE = `
   <svg viewBox="0 0 64 52" class="dp-folder-icon" aria-hidden="true">
     <defs>
       <linearGradient id="dp-folder-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -53,7 +53,7 @@ const FOLDER_ICON_LARGE = `
 `;
 
 // Small outline folder glyph for the "FOLDER" meta row.
-const FOLDER_ICON_SMALL = `
+export const FOLDER_ICON_SMALL = `
   <svg viewBox="0 0 20 16" class="dp-tile-meta-icon" aria-hidden="true">
     <path d="M1 3a1 1 0 0 1 1-1h4.5l2 2H18a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
   </svg>

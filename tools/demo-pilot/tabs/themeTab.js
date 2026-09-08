@@ -1,14 +1,23 @@
 /*
- * themeTab — brand-theme scrape, save, and site-wide apply.
- * Replaces the UE extension's ThemesTab.js + brandThemeCF.js +
- * applyBrandTheme(ToPages).js: themes are DA sheets (lib/theme.js), and
- * "apply to site" writes+publishes one shared /theme.json instead of
- * fanning writes out across every page.
+ * themeTab — brand-theme scrape, save, and site-wide apply, plus a browser
+ * for the newer schema-driven brand-theme structured content under
+ * /assets/themes (lib/themeBrowser.js). The scrape/save/apply-to-site flow
+ * above (lib/theme.js) is the UE-extension-derived CF flow, kept as-is;
+ * the browser below is a separate, additive mechanism — picking a theme
+ * there only records its path in the placeholders sheet ("theme" key), it
+ * doesn't touch /theme.json or the saved-themes list above.
+ *
+ * Builds its DOM shell once per container (see `dpBuilt` guard), same
+ * reasoning as tabs/imagesTab.js — the theme browser mount is a stateful
+ * widget (search/breadcrumb) that must not be torn down on every rerender.
  */
 
 import { saveTheme, listThemes, applyThemeToSite } from '../lib/theme.js';
+import { setPlaceholder } from '../lib/placeholders.js';
+import { mountThemeBrowser } from '../lib/themeBrowser.js';
 import { openScrapeModal } from '../lib/scrapeModal.js';
 import { track, EVENTS } from '../lib/analytics.js';
+import { THEMES_ASSETS_FOLDER } from '../config.js';
 
 const COLOR_FIELDS = [
   'backgroundColor', 'themeColor', 'darkColor', 'linkColor', 'linkHoverColor',
@@ -27,17 +36,69 @@ function swatches(fields) {
 export async function renderThemeTab(container, ctx) {
   const { state, rerender, toast } = ctx;
 
-  container.innerHTML = `
-    <div class="dp-row">
-      <strong>Theme</strong>
-      <sl-button id="dp-theme-import">Import from URL</sl-button>
-    </div>
-    <p class="dp-status" id="dp-theme-status">${state.themeStatus || ''}</p>
-    <div id="dp-theme-list"></div>
-  `;
+  if (!container.dataset.dpBuilt) {
+    container.dataset.dpBuilt = '1';
+    container.innerHTML = `
+      <div class="dp-row">
+        <strong>Theme</strong>
+        <sl-button id="dp-theme-import">Import from URL</sl-button>
+      </div>
+      <p class="dp-status" id="dp-theme-status"></p>
+      <div id="dp-theme-list"></div>
+      <div class="dp-row" style="margin-top:16px;"><strong>Browse brand themes</strong></div>
+      <p class="dp-error" id="dp-theme-browser-error"></p>
+      <div id="dp-theme-browser-mount" style="height:320px; overflow:auto;"></div>
+    `;
+
+    container.querySelector('#dp-theme-list').addEventListener('click', async (e) => {
+      const btn = e.target.closest('.dp-apply-btn');
+      if (!btn) return;
+      const path = btn.getAttribute('data-path');
+      const theme = (state.themes || []).find((t) => t.path === path);
+      if (!theme) return;
+      btn.setAttribute('disabled', 'true');
+      state.themeStatus = 'Applying to site…';
+      rerender();
+      try {
+        await applyThemeToSite({
+          org: ctx.org, repo: ctx.repo, token: ctx.token, ref: ctx.ref, fields: theme.fields,
+        });
+        track(EVENTS.THEME_APPLIED);
+        state.themeStatus = 'Applied — theme.json published.';
+      } catch (err) {
+        state.themeStatus = '';
+        toast((err && err.message) || 'Apply failed', true);
+      }
+      rerender();
+    });
+
+    container.querySelector('#dp-theme-import').addEventListener('click', () => {
+      openScrapeModal({
+        token: ctx.token,
+        mode: 'theme',
+        onComplete: async ({ colors, brandColors, siteUrl }) => {
+          track(EVENTS.IMPORT_STARTED);
+          state.themeStatus = 'Saving theme…';
+          rerender();
+          try {
+            await saveTheme({
+              org: ctx.org, repo: ctx.repo, token: ctx.token, siteUrl, colors, brandColors,
+            });
+            state.themesLoaded = false;
+            track(EVENTS.IMPORT_COMPLETED);
+          } catch (err) {
+            toast((err && err.message) || 'Save theme failed', true);
+          }
+          state.themeStatus = '';
+          rerender();
+        },
+      });
+    });
+  }
+
+  container.querySelector('#dp-theme-status').textContent = state.themeStatus || '';
 
   const listEl = container.querySelector('#dp-theme-list');
-
   if (!state.themesLoaded) {
     listEl.innerHTML = '<p class="dp-status">Loading saved themes…</p>';
     try {
@@ -56,7 +117,7 @@ export async function renderThemeTab(container, ctx) {
     listEl.innerHTML = '<p class="dp-status">No saved themes yet. Import from a live URL to create one.</p>';
   } else {
     listEl.innerHTML = '';
-    for (const theme of themes) {
+    themes.forEach((theme) => {
       const card = document.createElement('div');
       card.className = 'dp-theme-card';
       card.innerHTML = `
@@ -65,47 +126,31 @@ export async function renderThemeTab(container, ctx) {
         <sl-button class="dp-apply-btn" data-path="${theme.path}">Apply to site</sl-button>
       `;
       listEl.appendChild(card);
-    }
+    });
   }
 
-  listEl.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.dp-apply-btn');
-    if (!btn) return;
-    const path = btn.getAttribute('data-path');
-    const theme = themes.find((t) => t.path === path);
-    if (!theme) return;
-    btn.setAttribute('disabled', 'true');
-    state.themeStatus = 'Applying to site…';
-    rerender();
-    try {
-      await applyThemeToSite({ org: ctx.org, repo: ctx.repo, token: ctx.token, ref: ctx.ref, fields: theme.fields });
-      track(EVENTS.THEME_APPLIED);
-      state.themeStatus = 'Applied — theme.json published.';
-    } catch (err) {
-      state.themeStatus = '';
-      toast((err && err.message) || 'Apply failed', true);
-    }
-    rerender();
-  });
-
-  container.querySelector('#dp-theme-import').addEventListener('click', () => {
-    openScrapeModal({
+  // Mount the brand-theme folder browser once.
+  const browserMount = container.querySelector('#dp-theme-browser-mount');
+  const mountKey = `${ctx.token}|${ctx.org}|${ctx.repo}`;
+  if (browserMount.dataset.mountKey !== mountKey && ctx.token && ctx.org && ctx.repo) {
+    browserMount.dataset.mountKey = mountKey;
+    mountThemeBrowser(browserMount, {
       token: ctx.token,
-      mode: 'theme',
-      onComplete: async ({ colors, brandColors, siteUrl }) => {
-        track(EVENTS.IMPORT_STARTED);
-        state.themeStatus = 'Saving theme…';
-        rerender();
+      org: ctx.org,
+      repo: ctx.repo,
+      rootPath: THEMES_ASSETS_FOLDER,
+      onApply: async (themePath) => {
         try {
-          await saveTheme({ org: ctx.org, repo: ctx.repo, token: ctx.token, siteUrl, colors, brandColors });
-          state.themesLoaded = false;
-          track(EVENTS.IMPORT_COMPLETED);
+          await setPlaceholder({
+            org: ctx.org, repo: ctx.repo, token: ctx.token, key: 'theme', value: themePath,
+          });
+          toast('Theme selection saved to placeholders.');
         } catch (err) {
-          toast((err && err.message) || 'Save theme failed', true);
+          toast((err && err.message) || 'Failed to save theme selection', true);
         }
-        state.themeStatus = '';
-        rerender();
       },
+    }).catch((err) => {
+      container.querySelector('#dp-theme-browser-error').textContent = (err && err.message) || 'Could not load brand themes.';
     });
-  });
+  }
 }

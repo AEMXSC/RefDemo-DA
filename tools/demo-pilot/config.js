@@ -67,3 +67,15 @@ export const ASSETS_FOLDER = '/assets/images';
 // width/height/brand/path columns. See lib/assetsCatalog.js.
 export const CATALOG_PATH = '/config/assets-catalog.json';
 export const CATALOG_SHEET_NAME = 'data';
+
+// Root folder for the newer, schema-driven brand-theme structured content —
+// one subfolder per brand, each holding one JSON doc per theme (see the
+// "Brand Theme" JSON schema: brand-theme-color/brand-dark-color/etc). Browsed
+// via lib/themeBrowser.js, distinct from the legacy CF-derived THEME_PATH/
+// THEMES_FOLDER flow above (built for the UE-based site, kept as-is here).
+export const THEMES_ASSETS_FOLDER = '/assets/themes';
+
+// Site placeholders sheet (key/value rows) — same file tools/invoke-service
+// reads for "external-service-url" etc. lib/placeholders.js upserts the
+// "theme" key here to point at the brand-theme doc an author picked.
+export const PLACEHOLDERS_PATH = '/config/placeholders.json';
