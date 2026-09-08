@@ -65,8 +65,15 @@ export async function mountThemeBrowser(mount, {
 
   let currentItems = [];
   let renderFolder;
+  // Bumped on every renderTiles() call — lets an in-flight fetch from a
+  // superseded render (e.g. the search box re-rendering while a previous
+  // fetchStructuredContent() is still pending) detect it's stale and skip
+  // writing into a tile that's since been replaced.
+  let renderGeneration = 0;
 
   function renderTiles(items) {
+    renderGeneration += 1;
+    const myGeneration = renderGeneration;
     grid.innerHTML = '';
     if (!items.length) {
       grid.innerHTML = '<p class="dp-status">Empty folder.</p>';
@@ -98,12 +105,16 @@ export async function mountThemeBrowser(mount, {
         let fields = {};
         fetchStructuredContent(org, repo, item.path)
           .then((json) => {
+            if (myGeneration !== renderGeneration) return; // superseded — discard
             // Structured content comes back as { metadata, data: {...} } —
             // the color fields live under `data`.
             fields = (json && typeof json.data === 'object' && json.data) ? json.data : {};
             previewEl.innerHTML = themeBandsHtml(fields);
           })
-          .catch(() => { previewEl.innerHTML = '<span class="dp-error">Could not load</span>'; });
+          .catch(() => {
+            if (myGeneration !== renderGeneration) return;
+            previewEl.innerHTML = '<span class="dp-error">Could not load</span>';
+          });
         card.querySelector('.dp-apply-theme-btn').addEventListener('click', (e) => {
           e.stopPropagation();
           onApply(item.path, fields, item);
