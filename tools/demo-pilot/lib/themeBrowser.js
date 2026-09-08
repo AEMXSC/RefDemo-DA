@@ -142,7 +142,14 @@ export async function mountThemeBrowser(mount, {
       const listed = await listSource({
         org, repo, path, token,
       });
-      items = listed.map((item) => ({ ...item, path: toBarePath(item.path, org, repo) }));
+      // Theme docs are DA documents, listed with a trailing .html — strip it
+      // for files (folders never have it) so both the structured-content
+      // preview URL and the value saved to placeholders are the extensionless
+      // path DA's preview convention (and placeholders) expect.
+      items = listed.map((item) => {
+        const bare = toBarePath(item.path, org, repo);
+        return { ...item, path: isFolder(item) ? bare : bare.replace(/\.html$/i, '') };
+      });
     } catch (err) {
       grid.innerHTML = `<p class="dp-error">${(err && err.message) || 'Could not list folder.'}</p>`;
       return;
