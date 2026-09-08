@@ -430,9 +430,14 @@ body {
   background: transparent;
   color: #1473e6;
   cursor: pointer;
-  transition: background 150ms ease;
+  transition: background 150ms ease, transform 100ms ease;
 }
 
 .dp-apply-theme-btn:hover {
   background: rgb(20 115 230 / 10%);
+}
+
+.dp-apply-theme-btn:active {
+  background: rgb(20 115 230 / 20%);
+  transform: scale(0.9);
 }

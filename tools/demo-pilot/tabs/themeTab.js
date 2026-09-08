@@ -144,9 +144,9 @@ export async function renderThemeTab(container, ctx) {
           await setPlaceholder({
             org: ctx.org, repo: ctx.repo, token: ctx.token, key: 'theme', value: themePath,
           });
-          toast('Theme selection saved to placeholders.');
+          toast('Theme applied successfully on the site');
         } catch (err) {
-          toast((err && err.message) || 'Failed to save theme selection', true);
+          toast('Failed to apply Theme on the site.', true);
         }
       },
     }).catch((err) => {
