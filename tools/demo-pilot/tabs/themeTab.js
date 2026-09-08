@@ -39,15 +39,25 @@ export async function renderThemeTab(container, ctx) {
   if (!container.dataset.dpBuilt) {
     container.dataset.dpBuilt = '1';
     container.innerHTML = `
-      <div class="dp-row">
-        <strong>Theme</strong>
-        <sl-button id="dp-theme-import">Import from URL</sl-button>
+      <div class="dp-images-tab">
+        <div class="dp-row">
+          <strong>Theme</strong>
+        </div>
+        <p class="dp-status" id="dp-theme-status"></p>
+        <div id="dp-theme-list"></div>
+        <div class="dp-row"><p>Browse brand themes</p></div>
+        <p class="dp-error" id="dp-theme-browser-error"></p>
+        <div id="dp-theme-browser-mount" class="dp-browser-mount"></div>
+        <div class="dp-import-footer">
+          <button type="button" id="dp-theme-import" class="dp-import-fab" title="Import from URL" aria-label="Import from URL">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h4l2.5 2.5V12.5A1.5 1.5 0 0 1 9 14H4a1.5 1.5 0 0 1-1.5-1.5Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+              <path d="M8 2v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+              <path d="M2.7 8h5.1M5.5 5.8 8 8l-2.5 2.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
       </div>
-      <p class="dp-status" id="dp-theme-status"></p>
-      <div id="dp-theme-list"></div>
-      <div class="dp-row" style="margin-top:16px;"><strong>Browse brand themes</strong></div>
-      <p class="dp-error" id="dp-theme-browser-error"></p>
-      <div id="dp-theme-browser-mount" style="height:320px; overflow:auto;"></div>
     `;
 
     container.querySelector('#dp-theme-list').addEventListener('click', async (e) => {
