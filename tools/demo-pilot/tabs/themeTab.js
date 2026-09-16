@@ -12,7 +12,9 @@
  * widget (search/breadcrumb) that must not be torn down on every rerender.
  */
 
-import { saveTheme, listThemes, applyThemeToSite } from '../lib/theme.js';
+import {
+  saveTheme, saveBrandTheme, listThemes, applyThemeToSite,
+} from '../lib/theme.js';
 import { setPlaceholder } from '../lib/placeholders.js';
 import { mountThemeBrowser } from '../lib/themeBrowser.js';
 import { openScrapeModal } from '../lib/scrapeModal.js';
@@ -94,7 +96,13 @@ export async function renderThemeTab(container, ctx) {
             await saveTheme({
               org: ctx.org, repo: ctx.repo, token: ctx.token, siteUrl, colors, brandColors,
             });
+            await saveBrandTheme({
+              org: ctx.org, repo: ctx.repo, token: ctx.token, siteUrl, colors, brandColors,
+            });
             state.themesLoaded = false;
+            // Force the brand-theme folder browser to re-list so the new doc shows up.
+            const browserMount = container.querySelector('#dp-theme-browser-mount');
+            if (browserMount) delete browserMount.dataset.mountKey;
             track(EVENTS.IMPORT_COMPLETED);
           } catch (err) {
             toast((err && err.message) || 'Save theme failed', true);

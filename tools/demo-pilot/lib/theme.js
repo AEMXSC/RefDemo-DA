@@ -18,7 +18,7 @@
  */
 
 import { getSource, putJsonSource, listSource, publishSource } from './daAdmin.js';
-import { THEME_PATH, THEMES_FOLDER } from '../config.js';
+import { THEME_PATH, THEMES_FOLDER, THEMES_ASSETS_FOLDER } from '../config.js';
 
 // ---------------------------------------------------------------------------
 // Color utilities (hex + W3C sRGB relative luminance) — unchanged from
@@ -161,6 +161,44 @@ export async function saveTheme({ org, repo, token, siteUrl, colors, brandColors
   const path = `${THEMES_FOLDER}/${name}.json`;
   await putJsonSource({ org, repo, token, path, json: toSheet(fields) });
   return { path, name, fields };
+}
+
+/**
+ * Map a scrape result onto the schema-driven "Brand Theme" structured-content
+ * property names (see lib/themeBrowser.js THEME_COLOR_FIELDS) instead of the
+ * legacy sheet's camelCase keys.
+ */
+export function mapScrapeToBrandThemeFields({ siteUrl, colors, brandColors } = {}) {
+  const fields = mapScrapeToElements({ siteUrl, colors, brandColors });
+  const out = {
+    'brand-theme-color': fields.themeColor,
+    'brand-dark-color': fields.darkColor,
+    'brand-light-color': fields.backgroundColor,
+    'brand-link-color': fields.linkColor,
+    'brand-link-hover-color': fields.linkHoverColor,
+    'brand-text-color': fields.textColor,
+    'brand-light-text-color': fields.lightTextColor,
+  };
+  const cleaned = {};
+  for (const [k, v] of Object.entries(out)) {
+    if (v) cleaned[k] = v;
+  }
+  return cleaned;
+}
+
+/**
+ * Save a scrape result as a new brand-theme structured-content doc under
+ * /assets/themes/{brand}/{brand}-theme.html — the schema-driven doc browsed
+ * by lib/themeBrowser.js. Unlike saveTheme's sheet, the doc body is the flat
+ * schema-property object itself (no `:type: sheet` wrapping), per DA's
+ * structured-content Source API create contract.
+ */
+export async function saveBrandTheme({ org, repo, token, siteUrl, colors, brandColors }) {
+  const fields = mapScrapeToBrandThemeFields({ siteUrl, colors, brandColors });
+  const brand = slugFromUrl(siteUrl);
+  const path = `${THEMES_ASSETS_FOLDER}/${brand}/${brand}-theme.html`;
+  await putJsonSource({ org, repo, token, path, json: fields });
+  return { path, brand, fields };
 }
 
 /** List every saved theme, newest first. */
