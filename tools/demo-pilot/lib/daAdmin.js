@@ -68,6 +68,29 @@ export async function putJsonSource({
 }
 
 /**
+ * Create/overwrite an HTML document via the Source API — used for
+ * structured-content docs (see lib/theme.js saveBrandTheme) where the doc
+ * body must be the block-table div markup DA's editor expects
+ * (`<div class="block-name"><div><div>key</div><div>value</div></div>...`),
+ * not a raw JSON blob.
+ */
+export async function putHtmlSource({
+  org, repo, path, token, html,
+}) {
+  const body = new FormData();
+  body.append('data', new Blob([html], { type: 'text/html' }), 'document.html');
+  const resp = await fetch(sourcePath(org, repo, path), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body,
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    throw new Error(`putHtmlSource ${path} -> HTTP ${resp.status} ${text.slice(0, 200)}`);
+  }
+}
+
+/**
  * Create/overwrite a binary file (e.g. an image) via the Source API. Used by
  * lib/uploadImages.js to write scraped images into the DA site's own
  * /assets/images folder instead of AEM DAM.

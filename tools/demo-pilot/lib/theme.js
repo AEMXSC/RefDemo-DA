@@ -6,10 +6,11 @@
  *   /theme.json          — the single, canonical, PUBLISHED theme every page's
  *                           runtime reads (site-wide, not page-scoped). A plain
  *                           DA single-sheet document: { key, value } rows.
- *   /themes/{name}.json   — one saved theme per scrape/save, same shape, listed
- *                           via the DA List API. "Apply to site" just copies a
- *                           saved theme's fields into /theme.json and publishes
- *                           that one file — no page-by-page fan-out needed.
+ *   /themes/{brand}/{brand}-theme.json — one saved theme per brand, same
+ *                           shape, listed via the DA List API. "Apply to
+ *                           site" just copies a saved theme's fields into
+ *                           /theme.json and publishes that one file — no
+ *                           page-by-page fan-out needed.
  *
  * Color-mapping logic (mapScrapeToElements + luminance helpers) is ported
  * verbatim from the UE extension's lib/brandThemeCF.js — only the CF
@@ -17,7 +18,9 @@
  * model to satisfy.
  */
 
-import { getSource, putJsonSource, listSource, publishSource } from './daAdmin.js';
+import {
+  getSource, putJsonSource, putHtmlSource, listSource, publishSource,
+} from './daAdmin.js';
 import { THEME_PATH, THEMES_FOLDER, THEMES_ASSETS_FOLDER } from '../config.js';
 
 // ---------------------------------------------------------------------------
@@ -76,17 +79,11 @@ function darkestUnder(arr, threshold) {
 // Slug / name helpers
 // ---------------------------------------------------------------------------
 
-export function slugFromUrl(url) {
-  try {
-    const u = new URL(url);
-    return u.hostname.replace(/^www\./, '').replace(/\./g, '-').toLowerCase();
-  } catch (_) {
-    return 'site';
-  }
-}
-
-export function isoStamp(date = new Date()) {
-  return date.toISOString().replace(/\.\d+/, '').replace(/:/g, '-');
+// Same host -> folder-name logic as lib/uploadImages.js's folderForSite, so
+// scraped images and the brand-theme doc for a given site land under the
+// identical brand folder name.
+export function slugFromUrl(siteUrl) {
+  try { return new URL(siteUrl).host.replace(/^www\./, '').replace(/\./g, '-'); } catch (_) { return 'unknown-site'; }
 }
 
 // ---------------------------------------------------------------------------
@@ -154,11 +151,12 @@ function fromSheet(sheet) {
 // Public API
 // ---------------------------------------------------------------------------
 
-/** Save a scrape result as a new named theme under /themes/{slug}-{stamp}.json. */
+/** Save a scrape result as a new named theme under /themes/{brand}/{brand}-theme.json. */
 export async function saveTheme({ org, repo, token, siteUrl, colors, brandColors }) {
   const fields = mapScrapeToElements({ siteUrl, colors, brandColors });
-  const name = `${slugFromUrl(siteUrl)}-${isoStamp()}`;
-  const path = `${THEMES_FOLDER}/${name}.json`;
+  const brand = slugFromUrl(siteUrl);
+  const name = `${brand}-theme`;
+  const path = `${THEMES_FOLDER}/${brand}/${name}.json`;
   await putJsonSource({ org, repo, token, path, json: toSheet(fields) });
   return { path, name, fields };
 }
@@ -186,33 +184,71 @@ export function mapScrapeToBrandThemeFields({ siteUrl, colors, brandColors } = {
   return cleaned;
 }
 
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+/** One block "row": `<div><div>key</div><div>value</div></div>`. */
+function blockRow(key, value) {
+  return `<div><div>${escapeHtml(key)}</div><div>${escapeHtml(value)}</div></div>`;
+}
+
+/** A named block: `<div class="name">` wrapping its rows — renders as a table headed "name". */
+function block(name, rows) {
+  return `<div class="${escapeHtml(name)}">${rows.map(([k, v]) => blockRow(k, v)).join('')}</div>`;
+}
+
+/**
+ * Build the DA document body for a brand-theme structured-content doc: a
+ * `da-form` block (title/x-schema-name, so DA resolves this doc against the
+ * "brand-theme" schema) followed by a `brand-theme` block holding the
+ * schema's color properties — same block-table markup convention as any
+ * other authored block (see AGENTS.md markup-sections-blocks).
+ */
+function buildBrandThemeDoc(brand, fields) {
+  const formBlock = block('da-form', [
+    ['title', `${brand}-theme`],
+    ['x-schema-name', 'brand-theme'],
+  ]);
+  const themeBlock = block('brand-theme', Object.entries(fields));
+  return `<body><header></header><main><div>${formBlock}${themeBlock}</div></main><footer></footer></body>`;
+}
+
 /**
  * Save a scrape result as a new brand-theme structured-content doc under
  * /assets/themes/{brand}/{brand}-theme.html — the schema-driven doc browsed
- * by lib/themeBrowser.js. Unlike saveTheme's sheet, the doc body is the flat
- * schema-property object itself (no `:type: sheet` wrapping), per DA's
- * structured-content Source API create contract.
+ * by lib/themeBrowser.js. The doc body is DA's block-table div markup (a
+ * `da-form` block declaring the schema + a `brand-theme` block of color
+ * key/value rows), not a raw JSON blob — see buildBrandThemeDoc.
  */
 export async function saveBrandTheme({ org, repo, token, siteUrl, colors, brandColors }) {
   const fields = mapScrapeToBrandThemeFields({ siteUrl, colors, brandColors });
   const brand = slugFromUrl(siteUrl);
   const path = `${THEMES_ASSETS_FOLDER}/${brand}/${brand}-theme.html`;
-  await putJsonSource({ org, repo, token, path, json: fields });
+  const html = buildBrandThemeDoc(brand, fields);
+  await putHtmlSource({ org, repo, token, path, html });
   return { path, brand, fields };
 }
 
-/** List every saved theme, newest first. */
+/** List every saved theme (one per brand subfolder), newest first. */
 export async function listThemes({ org, repo, token }) {
-  const entries = await listSource({ org, repo, token, path: THEMES_FOLDER });
-  const files = entries.filter((e) => e && typeof e.name === 'string' && e.name.endsWith('.json'));
+  const brandFolders = await listSource({ org, repo, token, path: THEMES_FOLDER });
   const themes = [];
-  for (const f of files) {
-    const path = `${THEMES_FOLDER}/${f.name}`;
+  for (const folder of brandFolders) {
+    if (!folder || typeof folder.name !== 'string' || folder.ext) continue; // skip stray files, only descend into brand folders
+    const folderPath = `${THEMES_FOLDER}/${folder.name}`;
     // eslint-disable-next-line no-await-in-loop -- small folder, sequential is fine and keeps ordering simple
-    const sheet = await getSource({ org, repo, token, path });
-    if (!sheet) continue;
-    const fields = fromSheet(sheet);
-    themes.push({ path, name: f.name.replace(/\.json$/, ''), fields, lastModified: f.lastModified || null });
+    const files = await listSource({ org, repo, token, path: folderPath });
+    for (const f of files.filter((e) => e && typeof e.name === 'string' && e.name.endsWith('.json'))) {
+      const path = `${folderPath}/${f.name}`;
+      // eslint-disable-next-line no-await-in-loop -- small folder, sequential is fine and keeps ordering simple
+      const sheet = await getSource({ org, repo, token, path });
+      if (!sheet) continue;
+      const fields = fromSheet(sheet);
+      themes.push({ path, name: f.name.replace(/\.json$/, ''), fields, lastModified: f.lastModified || null });
+    }
   }
   themes.sort((a, b) => (a.name < b.name ? 1 : -1));
   return themes;
