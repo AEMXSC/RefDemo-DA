@@ -131,6 +131,32 @@ function formatTaskDate(value) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function parseTaskDateToMs(value) {
+  if (!value) return 0;
+  const ms = Date.parse(String(value).slice(0, 10));
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+function getTaskSortDateMs(task) {
+  return parseTaskDateToMs(task.plannedStartDate)
+    || parseTaskDateToMs(task.plannedCompletionDate)
+    || parseTaskDateToMs(task.commitDate);
+}
+
+function toNumberOrZero(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getStatusSortRank(status) {
+  const s = (status || '').toUpperCase();
+  if (s === 'NEW') return 0;
+  if (s === 'INP') return 1;
+  if (s === 'CPL') return 3;
+  if (s === 'REJ') return 4;
+  return 2;
+}
+
 async function fetchWorkfrontTasks(url, assignedToId, token) {
   const target = new URL(AIO_WF_ACTION_ENDPOINT);
   target.searchParams.set('url', url);
@@ -145,12 +171,22 @@ async function fetchWorkfrontTasks(url, assignedToId, token) {
 
   const json = await resp.json();
   const rows = json.data || [];
-  return rows.map((row) => ({
+  const tasks = rows.map((row) => ({
     ...row,
     id: row.ID,
     status: (row.status || '').toUpperCase(),
     statusLabel: row.status || '',
   }));
+
+  tasks.sort((a, b) => {
+    const byDate = getTaskSortDateMs(b) - getTaskSortDateMs(a);
+    if (byDate !== 0) return byDate;
+    const byStatus = getStatusSortRank(a.status) - getStatusSortRank(b.status);
+    if (byStatus !== 0) return byStatus;
+    return toNumberOrZero(b.taskNumber) - toNumberOrZero(a.taskNumber);
+  });
+
+  return tasks;
 }
 
 async function updateWorkfrontTask(url, task, action, token) {
