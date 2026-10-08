@@ -69,12 +69,13 @@ body {
 
 .dp-select {
   min-width: 120px;
-  padding: 6px 8px;
-  font: inherit;
+  padding: 2px 4px;
   color: inherit;
   border: 1px solid #ccc;
   border-radius: 4px;
   background: #fff;
+  font-size: 11pt;
+  font-weight: bold;
 }
 
 .dp-grid {
