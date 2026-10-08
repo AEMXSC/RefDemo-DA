@@ -70,6 +70,186 @@ body {
   white-space: nowrap;
 }
 
+.dp-subtle {
+  color: #6e6e6e;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.dp-fragment-controls {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.dp-fragment-search {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.dp-fragment-folder {
+  max-width: 45%;
+  padding: 6px 8px;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+}
+
+.dp-icon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d5d5d5;
+  border-radius: 50%;
+  background: #fff;
+  color: #444;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dp-icon-btn:hover {
+  background: #f0f0f0;
+  color: #000;
+}
+
+.dp-fragment-variant {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #6e6e6e;
+}
+
+.dp-fragment-variant select {
+  padding: 4px 6px;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+}
+
+.dp-fragment-list {
+  display: grid;
+  gap: 12px;
+}
+
+.dp-fragment-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  grid-template-areas:
+    "media text"
+    "actions actions";
+  gap: 8px 12px;
+  align-items: start;
+  border: 1px solid #e1e1e1;
+  border-radius: 6px;
+  background: #fff;
+  padding: 10px;
+}
+
+.dp-fragment-edit {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f0f0f0;
+  color: #444;
+  font-size: 13px;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.dp-fragment-edit:hover {
+  background: #e0e0e0;
+  color: #000;
+}
+
+.dp-fragment-media {
+  grid-area: media;
+  min-width: 0;
+}
+
+.dp-fragment-media img,
+.dp-fragment-placeholder {
+  width: 100%;
+  height: 84px;
+  border-radius: 4px;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f3f3;
+  color: #777;
+  font-weight: 700;
+}
+
+.dp-fragment-text {
+  grid-area: text;
+  min-width: 0;
+  max-height: 84px;
+  padding-right: 26px;
+  overflow: hidden;
+}
+
+.dp-fragment-text h3 {
+  font-size: 15px;
+  line-height: 1.25;
+  margin: 0 0 4px;
+}
+
+.dp-fragment-text p {
+  color: #4b4b4b;
+  font-size: 13px;
+  line-height: 1.35;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dp-fragment-actions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dp-fragment-actions span {
+  color: #777;
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (width <= 420px) {
+  .dp-fragment-card {
+    grid-template-columns: 88px 1fr;
+  }
+}
+
+#dp-images-browser-label {
+  font-size: 15px;
+}
+
 .dp-select {
   min-width: 120px;
   padding: 2px 4px;

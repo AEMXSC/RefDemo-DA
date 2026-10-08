@@ -114,3 +114,14 @@ export async function copyDaAssetToClipboard({
 export async function copyTextToClipboard(text) {
   await navigator.clipboard.writeText(String(text ?? ''));
 }
+
+export async function copyHtmlToClipboard(html, plainText = '') {
+  if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([plainText || html], { type: 'text/plain' }),
+    })]);
+    return;
+  }
+  await copyTextToClipboard(plainText || html);
+}

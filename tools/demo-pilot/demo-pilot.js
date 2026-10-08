@@ -13,12 +13,12 @@ import { readTexts } from './lib/textStorage.js';
 import { fetchAemConfig } from './lib/aemConfig.js';
 import { AEM_ORG_ID, AEM_ASSET_SELECTOR_API_KEY } from './config.js';
 import renderImagesTab from './tabs/imagesTab.js';
-import { renderTextsTab } from './tabs/textsTab.js';
+import renderTextsTab from './tabs/textsTab.js';
 import { renderThemeTab } from './tabs/themeTab.js';
 
 const TABS = [
   { id: 'images', label: 'Images', render: renderImagesTab },
-  { id: 'texts', label: 'Texts', render: renderTextsTab },
+  { id: 'texts', label: 'Fragments', render: renderTextsTab },
   { id: 'theme', label: 'Theme', render: renderThemeTab },
 ];
 
@@ -32,6 +32,14 @@ const state = {
   uploadStatus: '',
   themeStatus: '',
   selectorRefresh: 0,
+  structuredContent: [],
+  structuredFolders: [],
+  structuredContentQuery: '',
+  structuredContentFolder: '',
+  structuredTeaserVariant: '',
+  structuredContentLoaded: false,
+  structuredContentLoading: false,
+  structuredContentError: '',
   imageAssetSource: 'da',
 };
 
@@ -89,7 +97,7 @@ function render(ctx) {
 }
 
 (async function init() {
-  const { context, token } = await DA_SDK;
+  const { context, token, actions } = await DA_SDK;
   const {
     org,
     repo,
@@ -128,6 +136,7 @@ function render(ctx) {
     state,
     rerender: () => render(ctx),
     toast: showToast,
+    actions,
     token,
     org,
     repo,
