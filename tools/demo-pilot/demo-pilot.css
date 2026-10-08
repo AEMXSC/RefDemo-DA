@@ -45,6 +45,9 @@ body {
 
 .dp-panel {
   flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow-y: auto;
   padding: 12px;
 }
@@ -207,6 +210,7 @@ body {
 .dp-images-tab {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   height: 100%;
   min-height: 0;
   position: relative;
@@ -214,13 +218,11 @@ body {
 
 .dp-import-footer {
   flex: 0 0 auto;
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
   display: flex;
   justify-content: flex-end;
   padding: 6px 12px;
-  background: linear-gradient(to top, #fff 70%, rgb(255 255 255 / 0%));
+  margin-top: auto;
+  background: transparent;
 }
 
 .dp-import-fab {
@@ -253,6 +255,30 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+}
+
+.dp-selector-mount {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dp-selector-mount [data-testid="asset-selector-shim-container"] {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  width: 100% !important;
+}
+
+.dp-selector-mount iframe[data-testid="microfrontend"] {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0;
 }
 
 .dp-browser-sticky {
