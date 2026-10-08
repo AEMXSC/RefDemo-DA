@@ -47,7 +47,7 @@ export async function renderThemeTab(container, ctx) {
         </div>
         <p class="dp-status" id="dp-theme-status"></p>
         <div id="dp-theme-list"></div>
-        <div class="dp-row"><p>Browse brand themes</p></div>
+        <div class="dp-row"><p id="dp-theme-browser-label">Browse brand themes</p></div>
         <p class="dp-error" id="dp-theme-browser-error"></p>
         <div id="dp-theme-browser-mount" class="dp-browser-mount"></div>
         <div class="dp-import-footer">

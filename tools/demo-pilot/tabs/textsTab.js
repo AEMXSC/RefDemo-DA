@@ -78,8 +78,8 @@ export default function renderTextsTab(container, ctx) {
         ${folderOptions}
       </select>
     </div>
-    <label class="dp-fragment-variant">Style:
-      <select id="dp-fragment-variant">
+    <label class="dp-fragment-variant dp-inline-field-label">Style:
+      <select id="dp-fragment-variant" class="dp-select dp-fragment-variant-select">
         ${[
     ['', 'Image left (default)'],
     ['right', 'Image right'],
