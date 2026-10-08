@@ -86,12 +86,39 @@ const AIO_WF_ACTION_ENDPOINT = 'https://675172-referencedemopartner-stage.adobei
 async function fetchWorkfrontConfig(org, repo) {
   const lookup = await fetchPlaceholderLookup(org, repo);
   const instance = (lookup['workfront-instance-url'] || '').replace(/\/+$/, '');
-  if (!instance) return { instance: '', tasksUrl: '', actionUrl: '' };
+  if (!instance) {
+    return {
+      instance: '', tasksUrl: '', actionUrl: '', experienceOrg: '', solutionOrg: '',
+    };
+  }
+
+  let instanceSlug = '';
+  try {
+    instanceSlug = new URL(instance).hostname.split('.')[0] || '';
+  } catch (e) {
+    instanceSlug = '';
+  }
+
+  const experienceOrg = (lookup['workfront-experience-org'] || instanceSlug || '').replace(/^@/, '');
+  const solutionOrg = lookup['workfront-experience-solution-org'] || (experienceOrg ? `so:${experienceOrg}-Production` : '');
+
   return {
     instance,
     tasksUrl: `${instance}${WORKFRONT_TASKS_SEARCH_PATH}`,
     actionUrl: `${instance}${WORKFRONT_TASK_ACTION_PATH}`,
+    experienceOrg,
+    solutionOrg,
   };
+}
+
+function buildWorkfrontProjectUiUrl(config, projectId) {
+  if (!config?.experienceOrg || !config?.solutionOrg || !projectId) return '';
+  return `https://experience.adobe.com/#/@${config.experienceOrg}/${config.solutionOrg}/workfront/project/${projectId}/tasks`;
+}
+
+function buildWorkfrontTaskUiUrl(config, taskId) {
+  if (!config?.experienceOrg || !config?.solutionOrg || !taskId) return '';
+  return `https://experience.adobe.com/#/@${config.experienceOrg}/${config.solutionOrg}/workfront/task/${taskId}`;
 }
 
 // Resolve a Workfront user ID from an email address.
@@ -119,7 +146,7 @@ const WORKFRONT_TASK_FIELDS = [
   'ID', 'name', 'status', 'percentComplete', 'priority', 'priorityColor', 'condition',
   'plannedStartDate', 'plannedCompletionDate', 'commitDate', 'canStart', 'isReady',
   'isStatusComplete', 'hasDocuments', 'hasNotes', 'hasMessages',
-  'workRequired', 'taskNumber', 'URL', 'project:name', 'assignedTo:name', 'assignedToID', 'objCode',
+  'workRequired', 'taskNumber', 'URL', 'project:name', 'projectID', 'assignedTo:name', 'assignedToID', 'objCode',
 ].join(',');
 
 // Workfront dates look like "2026-08-07T09:00:00:000-0700" — show just the date part.
@@ -157,7 +184,7 @@ function getStatusSortRank(status) {
   return 2;
 }
 
-async function fetchWorkfrontTasks(url, assignedToId, token) {
+async function fetchWorkfrontTasks(url, assignedToId, token, config = {}) {
   const target = new URL(AIO_WF_ACTION_ENDPOINT);
   target.searchParams.set('url', url);
   target.searchParams.set('method', 'GET');
@@ -174,8 +201,11 @@ async function fetchWorkfrontTasks(url, assignedToId, token) {
   const tasks = rows.map((row) => ({
     ...row,
     id: row.ID,
+    projectId: row.projectID || row.project?.ID || '',
     status: (row.status || '').toUpperCase(),
     statusLabel: row.status || '',
+    taskUiUrl: buildWorkfrontTaskUiUrl(config, row.ID) || row.URL || '',
+    projectUiUrl: buildWorkfrontProjectUiUrl(config, row.projectID || row.project?.ID || ''),
   }));
 
   tasks.sort((a, b) => {
@@ -437,7 +467,8 @@ class RefDemoInvokeService extends LitElement {
 
   // eslint-disable-next-line class-methods-use-this
   openTask(task) {
-    if (task.URL) window.open(task.URL, '_blank', 'noopener');
+    const targetUrl = task.taskUiUrl || task.URL;
+    if (targetUrl) window.open(targetUrl, '_blank', 'noopener');
   }
 
   connectedCallback() {
@@ -507,7 +538,7 @@ class RefDemoInvokeService extends LitElement {
       }
       const userId = await fetchWorkfrontUserId(cfg.instance, profile.userEmail, this.token);
       if (!userId) throw new Error(`No Workfront user found for ${profile.userEmail}.`);
-      this._tasks = await fetchWorkfrontTasks(cfg.tasksUrl, userId, this.token);
+      this._tasks = await fetchWorkfrontTasks(cfg.tasksUrl, userId, this.token, cfg);
       this._tasksState = 'loaded';
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -611,6 +642,14 @@ class RefDemoInvokeService extends LitElement {
   renderTask(task) {
     const busy = this._busyTaskId === task.id;
     const project = task.project?.name;
+    const taskUrl = task.taskUiUrl || task.URL;
+    const projectUrl = task.projectUiUrl;
+    let projectContent = nothing;
+    if (project) {
+      projectContent = projectUrl
+        ? html`<a class="task-project-link task-project" href=${projectUrl} target="_blank" rel="noopener noreferrer" title=${project}>${project}</a>`
+        : html`<span class="task-project" title=${project}>${project}</span>`;
+    }
     const due = formatTaskDate(task.plannedCompletionDate || task.commitDate);
     const overdue = isTaskOverdue(task);
     const pct = Math.round(task.percentComplete || 0);
@@ -618,7 +657,9 @@ class RefDemoInvokeService extends LitElement {
     return html`
       <li class="task">
         <div class="task-head">
-          <p class="task-name" title=${task.name}>${task.name}</p>
+          ${taskUrl
+    ? html`<a class="task-name-link" href=${taskUrl} target="_blank" rel="noopener noreferrer" title=${task.name}><span class="task-name">${task.name}</span></a>`
+    : html`<p class="task-name" title=${task.name}>${task.name}</p>`}
           <div class="task-actions">
             ${busy
     ? html`<div class="spinner" aria-hidden="true"></div>`
@@ -633,12 +674,12 @@ class RefDemoInvokeService extends LitElement {
                   ?disabled=${disabled}
                   @click=${() => { if (!disabled) this.runTaskAction(task, a); }}>${ACTION_ICONS[a.icon]()}</button>`;
   })}
-              ${task.URL ? html`
+              ${taskUrl ? html`
                 <button class="icon-btn" title="Open in Workfront" aria-label="Open in Workfront" @click=${() => this.openTask(task)}>${ACTION_ICONS.external()}</button>` : nothing}`}
           </div>
         </div>
         <div class="task-sub">
-          ${project ? html`<span class="task-project" title=${project}>${project}</span>` : nothing}
+          ${projectContent}
           <span class="task-status status-${statusClass}">${task.statusLabel || task.status || '—'}</span>
         </div>
         <div class="task-foot">
