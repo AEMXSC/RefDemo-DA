@@ -72,8 +72,8 @@ export default function renderTextsTab(container, ctx) {
       <button id="dp-texts-refresh" class="dp-icon-btn" title="Refresh" aria-label="Refresh">↻</button>
     </div>
     <div class="dp-fragment-controls">
-      <input id="dp-fragment-search" class="dp-fragment-search" type="search" placeholder="Search fragments…" value="${escapeHtml(state.structuredContentQuery || '')}">
-      <select id="dp-fragment-folder" class="dp-fragment-folder">
+      <input id="dp-fragment-search" class="dp-text-input dp-fragment-search" type="search" placeholder="Search fragments…" value="${escapeHtml(state.structuredContentQuery || '')}">
+      <select id="dp-fragment-folder" class="dp-text-input dp-fragment-folder">
         <option value=""${state.structuredContentFolder ? '' : ' selected'}>All folders</option>
         ${folderOptions}
       </select>
