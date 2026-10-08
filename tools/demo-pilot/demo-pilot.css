@@ -214,10 +214,13 @@ body {
 
 .dp-import-footer {
   flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   justify-content: flex-end;
   padding: 6px 12px;
-  background: transparent;
+  background: linear-gradient(to top, #fff 70%, rgb(255 255 255 / 0%));
 }
 
 .dp-import-fab {

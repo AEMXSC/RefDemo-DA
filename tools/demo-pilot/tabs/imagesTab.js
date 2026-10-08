@@ -233,6 +233,7 @@ export default function renderImagesTab(container, ctx) {
   const selectorMount = container.querySelector('#dp-asset-selector-mount');
   const errorEl = container.querySelector('#dp-selector-error');
   const source = state.imageAssetSource;
+  selectorMount.className = source === 'aem' ? 'dp-selector-mount' : 'dp-browser-mount';
   const repositoryId = repositoryIdFromAuthorUrl(ctx.authorUrl);
   const mountKey = source === 'aem'
     ? `${source}|${ctx.token}|${ctx.orgId}|${ctx.assetSelectorApiKey}|${repositoryId}|${ctx.damFolderPath}|${state.selectorRefresh || 0}`
