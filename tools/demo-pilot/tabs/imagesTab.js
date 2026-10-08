@@ -190,7 +190,8 @@ export default function renderImagesTab(container, ctx) {
         <p class="dp-status" id="dp-images-status"></p>
         <div class="dp-row"><p id="dp-images-browser-label">Browse assets folder</p></div>
         <p class="dp-error" id="dp-selector-error"></p>
-        <div id="dp-asset-selector-mount" class="dp-browser-mount"></div>
+        <div id="dp-da-asset-mount" class="dp-browser-mount"></div>
+        <div id="dp-aem-asset-mount" class="dp-selector-mount" hidden></div>
         <div class="dp-import-footer">
           <button type="button" id="dp-images-import" class="dp-import-fab" title="Import from URL" aria-label="Import from URL">
             <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -230,27 +231,43 @@ export default function renderImagesTab(container, ctx) {
     ? 'Browse AEM assets folder'
     : 'Browse assets folder';
 
-  const selectorMount = container.querySelector('#dp-asset-selector-mount');
+  const daMount = container.querySelector('#dp-da-asset-mount');
+  const aemMount = container.querySelector('#dp-aem-asset-mount');
   const errorEl = container.querySelector('#dp-selector-error');
   const source = state.imageAssetSource;
-  selectorMount.className = source === 'aem' ? 'dp-selector-mount' : 'dp-browser-mount';
+  daMount.hidden = source === 'aem';
+  aemMount.hidden = source !== 'aem';
   const repositoryId = repositoryIdFromAuthorUrl(ctx.authorUrl);
-  const mountKey = source === 'aem'
-    ? `${source}|${ctx.token}|${ctx.orgId}|${ctx.assetSelectorApiKey}|${repositoryId}|${ctx.damFolderPath}|${state.selectorRefresh || 0}`
-    : `${source}|${ctx.token}|${ctx.org}|${ctx.repo}`;
+  errorEl.textContent = '';
 
-  if (selectorMount.dataset.mountKey !== mountKey) {
-    selectorMount.dataset.mountKey = mountKey;
-    selectorMount.innerHTML = '';
-    errorEl.textContent = '';
-
-    if (source === 'aem') {
-      if (!ctx.token || !repositoryId || !ctx.damFolderPath) {
-        errorEl.textContent = 'AEM asset source is not configured for this project.';
-        return;
+  const daMountKey = `${ctx.token}|${ctx.org}|${ctx.repo}`;
+  if (daMount.dataset.mountKey !== daMountKey && ctx.token && ctx.org && ctx.repo) {
+    daMount.dataset.mountKey = daMountKey;
+    daMount.innerHTML = '';
+    mountAssetBrowser(daMount, {
+      token: ctx.token,
+      org: ctx.org,
+      repo: ctx.repo,
+      rootPath: ASSETS_FOLDER,
+      onAssetPick: (assetPath) => copyImage(assetPath, ctx, toast),
+    }).catch((err) => {
+      if (state.imageAssetSource === 'da') {
+        errorEl.textContent = (err && err.message) || 'Could not load the assets folder.';
       }
+    });
+  }
 
-      mountAssetSelector(selectorMount, {
+  const aemMountKey = `${ctx.token}|${ctx.orgId}|${ctx.assetSelectorApiKey}|${repositoryId}|${ctx.damFolderPath}|${state.selectorRefresh || 0}`;
+  if (source === 'aem') {
+    if (!ctx.token || !repositoryId || !ctx.damFolderPath) {
+      errorEl.textContent = 'AEM asset source is not configured for this project.';
+      return;
+    }
+
+    if (aemMount.dataset.mountKey !== aemMountKey) {
+      aemMount.dataset.mountKey = aemMountKey;
+      aemMount.innerHTML = '';
+      mountAssetSelector(aemMount, {
         imsToken: ctx.token,
         imsOrg: ctx.orgId,
         apiKey: ctx.assetSelectorApiKey,
@@ -258,20 +275,9 @@ export default function renderImagesTab(container, ctx) {
         path: ctx.damFolderPath,
         onAssetPick: (selection) => copyDamPath(selection.path, ctx, toast),
       }).catch((err) => {
-        errorEl.textContent = (err && err.message) || 'Could not load the AEM Asset Selector.';
-      });
-      return;
-    }
-
-    if (ctx.token && ctx.org && ctx.repo) {
-      mountAssetBrowser(selectorMount, {
-        token: ctx.token,
-        org: ctx.org,
-        repo: ctx.repo,
-        rootPath: ASSETS_FOLDER,
-        onAssetPick: (assetPath) => copyImage(assetPath, ctx, toast),
-      }).catch((err) => {
-        errorEl.textContent = (err && err.message) || 'Could not load the assets folder.';
+        if (state.imageAssetSource === 'aem') {
+          errorEl.textContent = (err && err.message) || 'Could not load the AEM Asset Selector.';
+        }
       });
     }
   }
