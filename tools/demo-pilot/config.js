@@ -41,6 +41,12 @@ export const FETCH_IMAGE_ACTION_URL = 'https://675172-referencedemopartner-stage
 // kept action only sends the header when this is non-empty.
 export const AEM_ORG_ID = '';
 
+// IMS Client ID ("API Key") for the embedded AEM Assets Selector widget's own
+// API calls. Separate from the DA plugin's bearer token. Sites can also supply
+// this via the DA config row `aem.assetSelectorApiKey`; this constant is only a
+// fallback when that row is absent.
+export const AEM_ASSET_SELECTOR_API_KEY = '';
+
 // DA Admin API origin (Source / List APIs).
 export const DA_ADMIN_ORIGIN = 'https://admin.da.live';
 

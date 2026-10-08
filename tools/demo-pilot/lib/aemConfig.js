@@ -27,10 +27,8 @@ function rowsFromConfig(json) {
 }
 
 function rowValue(row, keyNames) {
-  for (const k of keyNames) {
-    if (row && typeof row[k] === 'string' && row[k]) return row[k];
-  }
-  return '';
+  const key = keyNames.find((candidate) => row && typeof row[candidate] === 'string' && row[candidate]);
+  return key ? row[key] : '';
 }
 
 /** Fetch the site's whole DA config once, parsed into a flat { key: value } map. */
@@ -40,13 +38,11 @@ async function fetchDaConfigRows({ org, repo, token }) {
     const resp = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     if (!resp.ok) return {};
     const json = await resp.json().catch(() => null);
-    const out = {};
-    for (const row of rowsFromConfig(json)) {
+    return rowsFromConfig(json).reduce((out, row) => {
       const rowKey = rowValue(row, ['key', 'Key']);
-      if (!rowKey) continue;
-      out[rowKey] = rowValue(row, ['value', 'Text']);
-    }
-    return out;
+      if (rowKey) out[rowKey] = rowValue(row, ['value', 'Text']);
+      return out;
+    }, {});
   } catch (_) {
     return {};
   }
@@ -59,14 +55,17 @@ export function authorUrlFromRepositoryId(repositoryId) {
 }
 
 /**
- * Fetch the DA site config once and pull out both AEM Assets integration
- * values: `aem.repositoryId` (-> authorUrl) and `imsorg` (-> the IMS
- * Organization ID for the x-gw-ims-org-id header). Both are '' when absent.
+ * Fetch the DA site config once and pull out the AEM Assets integration
+ * values: `aem.repositoryId` (-> authorUrl), `imsorg` (-> the IMS
+ * Organization ID for the x-gw-ims-org-id header), and an optional
+ * `aem.assetSelectorApiKey` (-> the embedded Asset Selector widget's own IMS
+ * Client ID). All are '' when absent.
  */
 export async function fetchAemConfig({ org, repo, token }) {
   const rows = await fetchDaConfigRows({ org, repo, token });
   return {
     authorUrl: authorUrlFromRepositoryId(rows['aem.repositoryId'] || ''),
     imsOrgId: rows.imsorg || '',
+    assetSelectorApiKey: rows['aem.assetSelectorApiKey'] || '',
   };
 }

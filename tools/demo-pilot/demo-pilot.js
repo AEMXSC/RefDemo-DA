@@ -11,8 +11,8 @@ import { fetchUserEmail } from './lib/userProfile.js';
 import { setAnalyticsContext } from './lib/analytics.js';
 import { readTexts } from './lib/textStorage.js';
 import { fetchAemConfig } from './lib/aemConfig.js';
-import { AEM_ORG_ID } from './config.js';
-import { renderImagesTab } from './tabs/imagesTab.js';
+import { AEM_ORG_ID, AEM_ASSET_SELECTOR_API_KEY } from './config.js';
+import renderImagesTab from './tabs/imagesTab.js';
 import { renderTextsTab } from './tabs/textsTab.js';
 import { renderThemeTab } from './tabs/themeTab.js';
 
@@ -31,7 +31,12 @@ const state = {
   themesLoaded: false,
   uploadStatus: '',
   themeStatus: '',
+  selectorRefresh: 0,
+  imageAssetSource: 'da',
 };
+
+let tabBarBuilt = false;
+let panelEl = null;
 
 function showToast(message, isError = false) {
   const el = document.createElement('div');
@@ -49,34 +54,68 @@ function showToast(message, isError = false) {
 }
 
 function render(ctx) {
-  root.innerHTML = `
-    <div class="dp-tabs">
-      ${TABS.map((t) => `<button class="dp-tab ${t.id === state.activeTab ? 'is-active' : ''}" data-tab="${t.id}">${t.label}</button>`).join('')}
-    </div>
-    <div class="dp-panel" id="dp-panel"></div>
-  `;
-  root.querySelector('.dp-tabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.dp-tab');
-    if (!btn) return;
-    state.activeTab = btn.getAttribute('data-tab');
-    render(ctx);
+  if (!tabBarBuilt) {
+    tabBarBuilt = true;
+    root.innerHTML = `
+      <div class="dp-tabs">
+        ${TABS.map((t) => `<button class="dp-tab" data-tab="${t.id}">${t.label}</button>`).join('')}
+      </div>
+      <div class="dp-panel" id="dp-panel"></div>
+    `;
+    panelEl = root.querySelector('#dp-panel');
+    root.querySelector('.dp-tabs').addEventListener('click', (e) => {
+      const btn = e.target.closest('.dp-tab');
+      if (!btn) return;
+      const nextTab = btn.getAttribute('data-tab');
+      if (nextTab === state.activeTab) return;
+      state.activeTab = nextTab;
+      render(ctx);
+    });
+  }
+
+  root.querySelectorAll('.dp-tab').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.getAttribute('data-tab') === state.activeTab);
   });
-  const panel = root.querySelector('#dp-panel');
+
+  if (panelEl.dataset.lastTab !== state.activeTab) {
+    panelEl.dataset.lastTab = state.activeTab;
+    delete panelEl.dataset.dpBuilt;
+    panelEl.innerHTML = '';
+  }
+
+  const panel = panelEl;
   const active = TABS.find((t) => t.id === state.activeTab);
   active.render(panel, ctx);
 }
 
 (async function init() {
   const { context, token } = await DA_SDK;
-  const { org, repo, path, ref } = context;
+  const {
+    org,
+    repo,
+    path,
+    ref,
+  } = context;
 
   // aem.repositoryId / imsorg live in the DA site's own config (the same
   // aem.repositoryId key DA's native AEM Assets picker relies on) — read them
   // instead of hardcoding per deployment. AEM_ORG_ID is a manual fallback for
   // sites that haven't added an `imsorg` config row yet.
-  const aemConfig = await fetchAemConfig({ org, repo, token }).catch(() => ({ authorUrl: '', imsOrgId: '' }));
-  const authorUrl = aemConfig.authorUrl;
-  const orgId = aemConfig.imsOrgId || AEM_ORG_ID;
+  const {
+    authorUrl,
+    imsOrgId,
+    assetSelectorApiKey: configuredAssetSelectorApiKey,
+  } = await fetchAemConfig({
+    org,
+    repo,
+    token,
+  }).catch(() => ({
+    authorUrl: '',
+    imsOrgId: '',
+    assetSelectorApiKey: '',
+  }));
+  const orgId = imsOrgId || AEM_ORG_ID;
+  const assetSelectorApiKey = configuredAssetSelectorApiKey || AEM_ASSET_SELECTOR_API_KEY;
 
   setAnalyticsContext({ orgId: org, siteName: repo, aemHost: authorUrl });
   fetchUserEmail(token).then((email) => {
@@ -97,6 +136,7 @@ function render(ctx) {
     // Reachable only via the kept upload-to-dam action.
     authorUrl,
     orgId,
+    assetSelectorApiKey,
     damFolderPath: '/content/dam/imported-assets/en',
   };
 

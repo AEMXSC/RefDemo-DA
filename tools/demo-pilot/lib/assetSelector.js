@@ -5,26 +5,35 @@
  * from the UE extension's ImagesTab.js — same widget, same options.
  */
 
-const ASSET_SELECTOR_SRC =
-  'https://experience.adobe.com/solutions/CQ-assets-selectors/static-assets/resources/assets-selectors.js';
+const ASSET_SELECTOR_SRC = 'https://experience.adobe.com/solutions/CQ-assets-selectors/static-assets/resources/assets-selectors.js';
+
+let scriptPromise = null;
 
 function loadAssetSelectorScript() {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined') { reject(new Error('no window')); return; }
-    if (window.PureJSSelectors) { resolve(window.PureJSSelectors); return; }
+  if (typeof window === 'undefined') return Promise.reject(new Error('no window'));
+  if (window.PureJSSelectors) return Promise.resolve(window.PureJSSelectors);
+  if (scriptPromise) return scriptPromise;
+
+  scriptPromise = new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[src="${ASSET_SELECTOR_SRC}"]`);
     if (existing) {
       existing.addEventListener('load', () => resolve(window.PureJSSelectors));
-      existing.addEventListener('error', reject);
+      existing.addEventListener('error', () => reject(new Error('Failed to load the AEM Asset Selector script.')));
       if (window.PureJSSelectors) resolve(window.PureJSSelectors);
       return;
     }
     const script = document.createElement('script');
     script.src = ASSET_SELECTOR_SRC;
+    script.async = true;
     script.onload = () => resolve(window.PureJSSelectors);
-    script.onerror = reject;
+    script.onerror = () => reject(new Error('Failed to load the AEM Asset Selector script.'));
     document.head.appendChild(script);
+  }).catch((err) => {
+    scriptPromise = null;
+    throw err;
   });
+
+  return scriptPromise;
 }
 
 function isDirectoryAsset(asset) {
@@ -40,43 +49,68 @@ export function repositoryIdFromAuthorUrl(authorUrl) {
   try { return new URL(authorUrl).host; } catch (_) { return authorUrl.replace(/^https?:\/\//, '').replace(/\/.*$/, ''); }
 }
 
+export function normalizeSelectedAsset(asset) {
+  return {
+    id: asset?.['repo:assetId'] ?? asset?.['repo:id'] ?? asset?.id ?? null,
+    name: asset?.['repo:name'] ?? asset?.name ?? null,
+    path: asset?.['repo:path'] ?? asset?.path ?? null,
+    repositoryId: asset?.['repo:repositoryId'] ?? asset?.repositoryId ?? null,
+    mimeType: asset?.['dc:format'] ?? asset?.mimetype ?? asset?.format ?? null,
+    url: asset?.url ?? asset?.['repo:url'] ?? null,
+    thumbnailUrl: asset?.thumbnailUrl ?? asset?.['thumbnail-url'] ?? null,
+    raw: asset,
+  };
+}
+
 /**
  * @param {HTMLElement} mount
  * @param {object} opts
  * @param {string} opts.imsToken
  * @param {string} opts.imsOrg
  * @param {string} opts.repositoryId
+ * @param {string} [opts.apiKey]
  * @param {string} opts.path            DAM folder to browse
- * @param {(damPath: string, asset: object) => void} opts.onAssetPick
+ * @param {(selection: ReturnType<typeof normalizeSelectedAsset>) => void} opts.onAssetPick
  */
-export async function mountAssetSelector(mount, { imsToken, imsOrg, repositoryId, path, onAssetPick }) {
+export async function mountAssetSelector(mount, {
+  imsToken, imsOrg, repositoryId, apiKey, path, onAssetPick,
+}) {
+  const missing = [];
+  if (!repositoryId) missing.push('aem.repositoryId (DA site config)');
+  if (!imsToken) missing.push('IMS token');
+  if (missing.length) {
+    throw new Error(`AEM Assets is not configured for this DA site — missing: ${missing.join(', ')}.`);
+  }
+
   const PJS = await loadAssetSelectorScript();
   if (!PJS || typeof PJS.renderAssetSelector !== 'function') {
-    throw new Error('AEM Asset Selector script did not expose PureJSSelectors.');
+    throw new Error('The AEM Assets picker could not be loaded. Check your network connection or contact your administrator.');
   }
   mount.innerHTML = '';
+  const pick = (asset) => {
+    if (isDirectoryAsset(asset)) return;
+    const selection = normalizeSelectedAsset(asset);
+    if (selection.path && typeof onAssetPick === 'function') onAssetPick(selection);
+  };
   PJS.renderAssetSelector(mount, {
     imsToken,
     imsOrg,
+    ...(apiKey ? { apiKey } : {}),
     repositoryId,
     path,
     rail: true,
     noWrap: true,
+    aemTierType: 'author',
     colorScheme: 'light',
     hideTreeNav: true,
     hideFiltersButton: true,
-    featureSet: ['upload'],
+    selectionType: 'single',
+    featureSet: ['upload', 'collections', 'detail-panel'],
     acvConfig: { selectionType: 'single' },
-    handleAssetSelection: (assets) => {
-      const asset = assets && assets[0];
-      if (isDirectoryAsset(asset)) return;
-      const damPath = asset['repo:path'] || asset.path;
-      if (damPath && typeof onAssetPick === 'function') onAssetPick(damPath, asset);
-    },
-    handleNavigateToAsset: (asset) => {
-      if (isDirectoryAsset(asset)) return;
-      const damPath = asset['repo:path'] || asset.path;
-      if (damPath && typeof onAssetPick === 'function') onAssetPick(damPath, asset);
-    },
+    handleAssetSelection: (assets) => pick(assets && assets[0]),
+    handleNavigateToAsset: (asset) => pick(asset),
   });
+
+  requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
 }
