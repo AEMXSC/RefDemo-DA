@@ -216,6 +216,10 @@ body {
   position: relative;
 }
 
+.dp-images-tab [hidden] {
+  display: none !important;
+}
+
 .dp-import-footer {
   flex: 0 0 auto;
   display: flex;
