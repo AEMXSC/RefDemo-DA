@@ -673,9 +673,7 @@ class RefDemoInvokeService extends LitElement {
                   aria-label=${a.label}
                   ?disabled=${disabled}
                   @click=${() => { if (!disabled) this.runTaskAction(task, a); }}>${ACTION_ICONS[a.icon]()}</button>`;
-  })}
-              ${taskUrl ? html`
-                <button class="icon-btn" title="Open in Workfront" aria-label="Open in Workfront" @click=${() => this.openTask(task)}>${ACTION_ICONS.external()}</button>` : nothing}`}
+  })}`}
           </div>
         </div>
         <div class="task-sub">
