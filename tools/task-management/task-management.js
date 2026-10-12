@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
 // eslint-disable-next-line import/no-unresolved
-import { LitElement, html, nothing } from 'https://da.live/deps/lit/dist/index.js';
+import { LitElement, html, nothing } from 'da-lit';
 
 // Super Lite components (sl-button, etc.)
 import 'https://da.live/nx/public/sl/components.js';
@@ -86,12 +86,39 @@ const AIO_WF_ACTION_ENDPOINT = 'https://675172-referencedemopartner-stage.adobei
 async function fetchWorkfrontConfig(org, repo) {
   const lookup = await fetchPlaceholderLookup(org, repo);
   const instance = (lookup['workfront-instance-url'] || '').replace(/\/+$/, '');
-  if (!instance) return { instance: '', tasksUrl: '', actionUrl: '' };
+  if (!instance) {
+    return {
+      instance: '', tasksUrl: '', actionUrl: '', experienceOrg: '', solutionOrg: '',
+    };
+  }
+
+  let instanceSlug = '';
+  try {
+    instanceSlug = new URL(instance).hostname.split('.')[0] || '';
+  } catch (e) {
+    instanceSlug = '';
+  }
+
+  const experienceOrg = (lookup['workfront-experience-org'] || instanceSlug || '').replace(/^@/, '');
+  const solutionOrg = lookup['workfront-experience-solution-org'] || (experienceOrg ? `so:${experienceOrg}-Production` : '');
+
   return {
     instance,
     tasksUrl: `${instance}${WORKFRONT_TASKS_SEARCH_PATH}`,
     actionUrl: `${instance}${WORKFRONT_TASK_ACTION_PATH}`,
+    experienceOrg,
+    solutionOrg,
   };
+}
+
+function buildWorkfrontProjectUiUrl(config, projectId) {
+  if (!config?.experienceOrg || !config?.solutionOrg || !projectId) return '';
+  return `https://experience.adobe.com/#/@${config.experienceOrg}/${config.solutionOrg}/workfront/project/${projectId}/tasks`;
+}
+
+function buildWorkfrontTaskUiUrl(config, taskId) {
+  if (!config?.experienceOrg || !config?.solutionOrg || !taskId) return '';
+  return `https://experience.adobe.com/#/@${config.experienceOrg}/${config.solutionOrg}/workfront/task/${taskId}`;
 }
 
 // Resolve a Workfront user ID from an email address.
@@ -119,7 +146,7 @@ const WORKFRONT_TASK_FIELDS = [
   'ID', 'name', 'status', 'percentComplete', 'priority', 'priorityColor', 'condition',
   'plannedStartDate', 'plannedCompletionDate', 'commitDate', 'canStart', 'isReady',
   'isStatusComplete', 'hasDocuments', 'hasNotes', 'hasMessages',
-  'workRequired', 'taskNumber', 'URL', 'project:name', 'assignedTo:name', 'assignedToID', 'objCode',
+  'workRequired', 'taskNumber', 'URL', 'project:name', 'projectID', 'assignedTo:name', 'assignedToID', 'objCode',
 ].join(',');
 
 // Workfront dates look like "2026-08-07T09:00:00:000-0700" — show just the date part.
@@ -157,7 +184,7 @@ function getStatusSortRank(status) {
   return 2;
 }
 
-async function fetchWorkfrontTasks(url, assignedToId, token) {
+async function fetchWorkfrontTasks(url, assignedToId, token, config = {}) {
   const target = new URL(AIO_WF_ACTION_ENDPOINT);
   target.searchParams.set('url', url);
   target.searchParams.set('method', 'GET');
@@ -174,8 +201,11 @@ async function fetchWorkfrontTasks(url, assignedToId, token) {
   const tasks = rows.map((row) => ({
     ...row,
     id: row.ID,
+    projectId: row.projectID || row.project?.ID || '',
     status: (row.status || '').toUpperCase(),
     statusLabel: row.status || '',
+    taskUiUrl: buildWorkfrontTaskUiUrl(config, row.ID) || row.URL || '',
+    projectUiUrl: buildWorkfrontProjectUiUrl(config, row.projectID || row.project?.ID || ''),
   }));
 
   tasks.sort((a, b) => {
@@ -232,7 +262,7 @@ async function fetchUserProfile(token) {
     };
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.warn('[invoke-service] Failed to fetch user profile:', e);
+    console.warn('[task-management] Failed to fetch user profile:', e);
     return { userName: '', userEmail: '' };
   }
 }
@@ -263,37 +293,24 @@ function resolveOrgRepo(context) {
 
 function buildAemPageUrl(org, repo, path) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `https://main--${repo}--${org}.aem.page${normalizedPath}`;
+  return `https://main--${repo}--${org}.aem.live${normalizedPath}`;
 }
-
-const REVIEW_PROGRESS_SEQUENCE = [
-  'Fetching page details…',
-  'Collecting user details…',
-  'Creating project in Workfront…',
-  'Creating review task…',
-  'Assigning it to the user…',
-  'Nearly completed…',
-];
-
-const REVIEW_SLOW_HINT = 'About to finish... just a few more seconds...';
 
 /* ── External service call ───────────────────────────────────────────── */
 
-async function invokeExternalService(token, context, onProgress = () => {}) {
-  onProgress('Fetching page details…');
+async function invokeExternalService(token, context) {
   // eslint-disable-next-line no-console
-  console.log('[invoke-service] DA SDK context →', JSON.stringify(context, null, 2));
+  console.log('[task-management] DA SDK context →', JSON.stringify(context, null, 2));
 
   const { org, repo, path } = resolveOrgRepo(context);
   // eslint-disable-next-line no-console
-  console.log('[invoke-service] Resolved →', { org, repo, path });
+  console.log('[task-management] Resolved →', { org, repo, path });
 
-  onProgress('Collecting user details…');
   const [profile, config] = await Promise.all([
     fetchUserProfile(token),
     fetchPlaceholders(org, repo).catch((err) => {
       // eslint-disable-next-line no-console
-      console.warn('[invoke-service] Placeholders fetch failed:', err);
+      console.warn('[task-management] Placeholders fetch failed:', err);
       return { externalServiceUrl: '', externalServicePayload: '' };
     }),
   ]);
@@ -311,7 +328,7 @@ async function invokeExternalService(token, context, onProgress = () => {}) {
       resolvedPayload = JSON.parse(config.externalServicePayload);
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.warn('[invoke-service] Failed to parse custom payload, using default:', e);
+      console.warn('[task-management] Failed to parse custom payload, using default:', e);
     }
   }
 
@@ -327,9 +344,8 @@ async function invokeExternalService(token, context, onProgress = () => {}) {
 
   resolvedPayload.aemPageUrl = buildAemPageUrl(org, repo, path);
 
-  onProgress('Creating project in Workfront…');
   // eslint-disable-next-line no-console
-  console.log('[invoke-service] Calling service →', resolvedUrl);
+  console.log('[task-management] Calling service →', resolvedUrl);
 
   const resp = await fetch(resolvedUrl, {
     method: 'POST',
@@ -344,11 +360,7 @@ async function invokeExternalService(token, context, onProgress = () => {}) {
     throw new Error(`External service error: ${resp.status} – ${errorBody}`);
   }
 
-  onProgress('Creating review task…');
-  const result = await resp.json();
-  onProgress('Assigning it to you…');
-  onProgress('Nearly completed…');
-  return result;
+  return resp.json();
 }
 
 // Every task always shows the same set of action buttons; each one is disabled
@@ -398,7 +410,7 @@ function taskProgressLabel(task) {
 
 /* ── Lit component ───────────────────────────────────────────────────── */
 
-class RefDemoInvokeService extends LitElement {
+class RefDemoTaskManagement extends LitElement {
   static properties = {
     token: { attribute: false },
     context: { attribute: false },
@@ -409,7 +421,6 @@ class RefDemoInvokeService extends LitElement {
     _view: { state: true }, // 'confirm' | 'loading' | 'result'
     _isSuccess: { state: true },
     _message: { state: true },
-    _loadingMessage: { state: true },
     _serviceUrl: { state: true },
     // Tasks tab
     _tasksState: { state: true }, // 'idle' | 'loading' | 'loaded' | 'error'
@@ -423,63 +434,9 @@ class RefDemoInvokeService extends LitElement {
     super();
     this._tab = 'tasks';
     this._view = 'confirm';
-    this._loadingMessage = REVIEW_PROGRESS_SEQUENCE[0];
     this._tasksState = 'idle';
     this._tasks = [];
     this._taskQuery = '';
-    this._progressIndex = 0;
-    this._progressTicker = null;
-    this._slowHintTimer = null;
-    this._slowHintShown = false;
-  }
-
-  setLoadingMessage(message) {
-    this._loadingMessage = message;
-  }
-
-  advanceProgressTo(index) {
-    const bounded = Math.max(0, Math.min(index, REVIEW_PROGRESS_SEQUENCE.length - 1));
-    if (bounded <= this._progressIndex) return;
-    this._progressIndex = bounded;
-    this.setLoadingMessage(REVIEW_PROGRESS_SEQUENCE[this._progressIndex]);
-  }
-
-  handleServiceProgress(message) {
-    const idx = REVIEW_PROGRESS_SEQUENCE.indexOf(message);
-    if (idx !== -1) this.advanceProgressTo(idx);
-  }
-
-  startProgressSequence() {
-    this.stopProgressSequence();
-    this._progressIndex = 0;
-    this._slowHintShown = false;
-    this.setLoadingMessage(REVIEW_PROGRESS_SEQUENCE[0]);
-
-    this._progressTicker = window.setInterval(() => {
-      if (this._view !== 'loading') return;
-      if (this._progressIndex < REVIEW_PROGRESS_SEQUENCE.length - 1) {
-        this.advanceProgressTo(this._progressIndex + 1);
-      }
-    }, 2000);
-
-    this._slowHintTimer = window.setTimeout(() => {
-      if (this._view !== 'loading') return;
-      if (this._progressIndex >= REVIEW_PROGRESS_SEQUENCE.length - 2 && !this._slowHintShown) {
-        this._slowHintShown = true;
-        this.setLoadingMessage(REVIEW_SLOW_HINT);
-      }
-    }, 12000);
-  }
-
-  stopProgressSequence() {
-    if (this._progressTicker) {
-      clearInterval(this._progressTicker);
-      this._progressTicker = null;
-    }
-    if (this._slowHintTimer) {
-      clearTimeout(this._slowHintTimer);
-      this._slowHintTimer = null;
-    }
   }
 
   get filteredTasks() {
@@ -510,7 +467,8 @@ class RefDemoInvokeService extends LitElement {
 
   // eslint-disable-next-line class-methods-use-this
   openTask(task) {
-    if (task.URL) window.open(task.URL, '_blank', 'noopener');
+    const targetUrl = task.taskUiUrl || task.URL;
+    if (targetUrl) window.open(targetUrl, '_blank', 'noopener');
   }
 
   connectedCallback() {
@@ -544,20 +502,15 @@ class RefDemoInvokeService extends LitElement {
 
   async run() {
     this._view = 'loading';
-    this.startProgressSequence();
     try {
-      await invokeExternalService(this.token, this.context, (message) => this.handleServiceProgress(message));
-      this.advanceProgressTo(REVIEW_PROGRESS_SEQUENCE.length - 1);
-      this.setLoadingMessage('Done.');
+      await invokeExternalService(this.token, this.context);
       this._isSuccess = true;
-      this._message = 'Done. Review request submitted.';
+      this._message = 'The external service executed successfully.';
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[invoke-service] Error:', err);
+      console.error('[task-management] Error:', err);
       this._isSuccess = false;
-      this._message = err.message || 'Review request failed. Please try again.';
-    } finally {
-      this.stopProgressSequence();
+      this._message = err.message || 'An unexpected error occurred.';
     }
     this._view = 'result';
   }
@@ -585,11 +538,11 @@ class RefDemoInvokeService extends LitElement {
       }
       const userId = await fetchWorkfrontUserId(cfg.instance, profile.userEmail, this.token);
       if (!userId) throw new Error(`No Workfront user found for ${profile.userEmail}.`);
-      this._tasks = await fetchWorkfrontTasks(cfg.tasksUrl, userId, this.token);
+      this._tasks = await fetchWorkfrontTasks(cfg.tasksUrl, userId, this.token, cfg);
       this._tasksState = 'loaded';
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[invoke-service] Tasks error:', err);
+      console.error('[task-management] Tasks error:', err);
       this._tasksError = err.message || 'Failed to load tasks.';
       this._tasksState = 'error';
     }
@@ -613,7 +566,7 @@ class RefDemoInvokeService extends LitElement {
       await this.loadTasks(); // refresh after a successful transition
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[invoke-service] Task action error:', err);
+      console.error('[task-management] Task action error:', err);
       this._tasksError = err.message || 'Failed to update task.';
       this._tasksState = 'error';
     } finally {
@@ -625,30 +578,30 @@ class RefDemoInvokeService extends LitElement {
 
   renderConfirm() {
     return html`
-      <div class="invoke-service-panel">
-        <p class="invoke-service-message">
-          Send this page for review?
+      <div class="task-management-panel">
+        <p class="task-management-message">
+          Invoke the external service for this document?
           <span class="info-tip" tabindex="0" role="button" aria-label="Endpoint configuration info">
             ${ACTION_ICONS.info()}
             <span class="info-tip-bubble" role="tooltip">Submission endpoint can be configured in the placeholders file with key : external-service-url</span>
           </span>
         </p>
-        <div class="invoke-service-actions">
-          <sl-button class="secondary" @click=${this.close}>No</sl-button>
-          <sl-button ?disabled=${!this._serviceUrl} @click=${this.run}>Yes</sl-button>
+        <div class="task-management-actions">
+          <sl-button class="secondary" @click=${this.close}>Cancel</sl-button>
+          <sl-button ?disabled=${!this._serviceUrl} @click=${this.run}>Confirm</sl-button>
         </div>
       </div>`;
   }
 
   renderResult() {
     return html`
-      <div class="invoke-service-panel">
-        <div class="invoke-service-result">
-          <div class="invoke-service-icon">${this._isSuccess ? iconSuccess() : iconFailure()}</div>
-          <p class="invoke-service-label">${this._isSuccess ? 'Success' : 'Failed'}</p>
-          <p class="invoke-service-detail">${this._message}</p>
+      <div class="task-management-panel">
+        <div class="task-management-result">
+          <div class="task-management-icon">${this._isSuccess ? iconSuccess() : iconFailure()}</div>
+          <p class="task-management-label">${this._isSuccess ? 'Success' : 'Failed'}</p>
+          <p class="task-management-detail">${this._message}</p>
         </div>
-        <div class="invoke-service-actions">
+        <div class="task-management-actions">
           <sl-button @click=${this.close}>Close</sl-button>
         </div>
       </div>`;
@@ -656,13 +609,13 @@ class RefDemoInvokeService extends LitElement {
 
   renderNoAccess() {
     return html`
-      <div class="invoke-service-panel">
-        <div class="invoke-service-result">
-          <div class="invoke-service-icon">${iconFailure()}</div>
-          <p class="invoke-service-label">Access denied</p>
-          <p class="invoke-service-detail">You do not have permission to run this extension. Please contact an Adobe administrator if you believe this is a mistake.</p>
+      <div class="task-management-panel">
+        <div class="task-management-result">
+          <div class="task-management-icon">${iconFailure()}</div>
+          <p class="task-management-label">Access denied</p>
+          <p class="task-management-detail">You do not have permission to run this extension. Please contact an Adobe administrator if you believe this is a mistake.</p>
         </div>
-        <div class="invoke-service-actions">
+        <div class="task-management-actions">
           <sl-button @click=${this.close}>Close</sl-button>
         </div>
       </div>`;
@@ -672,10 +625,10 @@ class RefDemoInvokeService extends LitElement {
     switch (this._view) {
       case 'loading':
         return html`
-          <div class="invoke-service-panel">
-            <div class="invoke-service-loading">
+          <div class="task-management-panel">
+            <div class="task-management-loading">
               <div class="spinner" aria-hidden="true"></div>
-              <p class="invoke-service-message">${this._loadingMessage}</p>
+              <p class="task-management-message">Executing external service…</p>
             </div>
           </div>`;
       case 'result':
@@ -689,17 +642,24 @@ class RefDemoInvokeService extends LitElement {
   renderTask(task) {
     const busy = this._busyTaskId === task.id;
     const project = task.project?.name;
+    const taskUrl = task.taskUiUrl || task.URL;
+    const projectUrl = task.projectUiUrl;
+    let projectContent = nothing;
+    if (project) {
+      projectContent = projectUrl
+        ? html`<a class="task-project-link task-project" href=${projectUrl} target="_blank" rel="noopener noreferrer" title=${project}>${project}</a>`
+        : html`<span class="task-project" title=${project}>${project}</span>`;
+    }
     const due = formatTaskDate(task.plannedCompletionDate || task.commitDate);
     const overdue = isTaskOverdue(task);
     const pct = Math.round(task.percentComplete || 0);
     const statusClass = (task.status || '').toLowerCase();
-    const taskTitle = task.URL
-      ? html`<a class="task-name task-name-link" href=${task.URL} target="_blank" rel="noopener" title=${task.name}>${task.name}</a>`
-      : html`<p class="task-name" title=${task.name}>${task.name}</p>`;
     return html`
       <li class="task">
         <div class="task-head">
-          ${taskTitle}
+          ${taskUrl
+    ? html`<a class="task-name-link" href=${taskUrl} target="_blank" rel="noopener noreferrer" title=${task.name}><span class="task-name">${task.name}</span></a>`
+    : html`<p class="task-name" title=${task.name}>${task.name}</p>`}
           <div class="task-actions">
             ${busy
     ? html`<div class="spinner" aria-hidden="true"></div>`
@@ -713,13 +673,11 @@ class RefDemoInvokeService extends LitElement {
                   aria-label=${a.label}
                   ?disabled=${disabled}
                   @click=${() => { if (!disabled) this.runTaskAction(task, a); }}>${ACTION_ICONS[a.icon]()}</button>`;
-  })}
-              ${task.URL ? html`
-                <button class="icon-btn" title="Open in Workfront" aria-label="Open in Workfront" @click=${() => this.openTask(task)}>${ACTION_ICONS.external()}</button>` : nothing}`}
+  })}`}
           </div>
         </div>
         <div class="task-sub">
-          ${project ? html`<span class="task-project" title=${project}>${project}</span>` : nothing}
+          ${projectContent}
           <span class="task-status status-${statusClass}">${task.statusLabel || task.status || '—'}</span>
         </div>
         <div class="task-foot">
@@ -738,26 +696,26 @@ class RefDemoInvokeService extends LitElement {
     switch (this._tasksState) {
       case 'loading':
         return html`
-          <div class="invoke-service-panel">
-            <div class="invoke-service-loading">
+          <div class="task-management-panel">
+            <div class="task-management-loading">
               <div class="spinner" aria-hidden="true"></div>
-              <p class="invoke-service-message">Loading tasks…</p>
+              <p class="task-management-message">Loading tasks…</p>
             </div>
           </div>`;
       case 'error':
         return html`
-          <div class="invoke-service-panel">
-            <div class="invoke-service-result">
-              <div class="invoke-service-icon">${iconFailure()}</div>
-              <p class="invoke-service-detail">${this._tasksError}</p>
+          <div class="task-management-panel">
+            <div class="task-management-result">
+              <div class="task-management-icon">${iconFailure()}</div>
+              <p class="task-management-detail">${this._tasksError}</p>
             </div>
-            <div class="invoke-service-actions">
+            <div class="task-management-actions">
               <sl-button @click=${this.loadTasks}>Retry</sl-button>
             </div>
           </div>`;
       case 'loaded': {
         if (!this._tasks.length) {
-          return html`<div class="invoke-service-panel"><p class="invoke-service-message">No tasks assigned to you.</p></div>`;
+          return html`<div class="task-management-panel"><p class="task-management-message">No tasks assigned to you.</p></div>`;
         }
         const tasks = this.filteredTasks;
         const stats = this.taskStats;
@@ -779,7 +737,7 @@ class RefDemoInvokeService extends LitElement {
               @input=${(e) => { this._taskQuery = e.target.value; }} />
             ${tasks.length
     ? html`<ul class="task-list">${tasks.map((t) => this.renderTask(t))}</ul>`
-    : html`<p class="invoke-service-message">No tasks match “${this._taskQuery}”.</p>`}
+    : html`<p class="task-management-message">No tasks match “${this._taskQuery}”.</p>`}
           </div>`;
       }
       default:
@@ -804,7 +762,7 @@ class RefDemoInvokeService extends LitElement {
     return html`
       <div class="tabs" role="tablist">
         ${this.renderTab('tasks', 'Tasks')}
-        ${this.renderTab('service', 'Request Approval')}
+        ${this.renderTab('service', 'Service')}
       </div>
       <div class="tab-panel" role="tabpanel">
         ${this._tab === 'service' ? this.renderService() : this.renderTasks()}
@@ -812,14 +770,14 @@ class RefDemoInvokeService extends LitElement {
   }
 }
 
-customElements.define('refdemo-invoke-service', RefDemoInvokeService);
+customElements.define('refdemo-task-management', RefDemoTaskManagement);
 
 /* ── Init ────────────────────────────────────────────────────────────── */
 
 (async function init() {
   const { context, token, actions } = await DA_SDK;
 
-  const cmp = document.createElement('refdemo-invoke-service');
+  const cmp = document.createElement('refdemo-task-management');
   cmp.token = token;
   cmp.context = context;
   cmp.onClose = () => actions.closeLibrary();

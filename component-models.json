@@ -341,6 +341,86 @@
     ]
   },
   {
+    "id": "promotion",
+    "fields": [
+      {
+        "component": "text",
+        "valueType": "string",
+        "name": "contentFragment",
+        "label": "Default Content Fragment Path",
+        "required": true,
+        "description": "The default content fragment to display. At runtime, Adobe Target replaces this with a personalized offer for your audience."
+      },
+      {
+        "component": "text",
+        "valueType": "string",
+        "name": "contentFragmentVariation",
+        "label": "Content Fragment Variation",
+        "value": "",
+        "description": "Variation of the default content fragment to display; leave empty for master."
+      },
+      {
+        "component": "select",
+        "valueType": "string",
+        "name": "displaystyle",
+        "label": "Display Style",
+        "options": [
+          {
+            "name": "Default (card)",
+            "value": ""
+          },
+          {
+            "name": "Image Left",
+            "value": "image-left"
+          },
+          {
+            "name": "Image Right",
+            "value": "image-right"
+          },
+          {
+            "name": "Image Top",
+            "value": "image-top"
+          },
+          {
+            "name": "Image Bottom",
+            "value": "image-bottom"
+          }
+        ],
+        "value": ""
+      },
+      {
+        "component": "select",
+        "valueType": "string",
+        "name": "alignment",
+        "label": "Text Alignment",
+        "options": [
+          {
+            "name": "Center",
+            "value": "text-center"
+          },
+          {
+            "name": "Left",
+            "value": "text-left"
+          },
+          {
+            "name": "Right",
+            "value": "text-right"
+          }
+        ],
+        "value": "text-center"
+      },
+      {
+        "component": "text",
+        "valueType": "string",
+        "name": "mbox",
+        "label": "Target Mbox Name",
+        "required": true,
+        "value": "target-global-mbox",
+        "description": "The Adobe Target mbox name for personalization. Default is: 'target-global-mbox'."
+      }
+    ]
+  },
+  {
     "id": "quote",
     "fields": [
       {

@@ -1,0 +1,347 @@
+/* ─── Card ───
+   Site design language is flat, not shadowed/rounded: use the same 2px
+   solid-border treatment used elsewhere on buttons, no border radius. */
+.promotion .promotion-card {
+  display: flex;
+  flex-direction: row;
+  border: 2px solid var(--light-color);
+  background: var(--background-color);
+}
+
+/* ─── Image ─── */
+.promotion .promotion-card .promotion-image {
+  flex: 0 0 45%;
+  max-width: 45%;
+  overflow: hidden;
+}
+
+.promotion .promotion-card .promotion-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ─── Content ─── */
+.promotion .promotion-card .promotion-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--spacing-xxlarge);
+  gap: var(--spacing-small);
+}
+
+.promotion .promotion-card .promotion-title {
+  margin: 0;
+  font-size: var(--heading-font-size-l);
+  font-family: var(--heading-font-family);
+  color: var(--text-color);
+}
+
+.promotion .promotion-card .promotion-title::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 4px;
+  background: var(--main-accent-color);
+  margin-top: var(--spacing-medium);
+}
+
+.promotion .promotion-card .promotion-subtitle {
+  margin: 0;
+  font-size: var(--body-font-size-s);
+  font-family: var(--body-font-family);
+  color: var(--main-accent-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.promotion .promotion-card .promotion-description {
+  margin: var(--spacing-small) 0 0;
+  font-size: var(--body-font-size-m);
+  color: var(--text-color);
+  opacity: 0.85;
+}
+
+/* ─── CTA Button ───
+   Sharp corners, solid accent fill, 2px border, hover inverts. */
+.promotion .promotion-card .promotion-cta {
+  margin-top: var(--spacing-large);
+}
+
+.promotion .promotion-card .promotion-cta a.button {
+  display: inline-block;
+  line-height: 1;
+  padding: var(--spacing-small) var(--spacing-medium);
+  background: var(--main-accent-color);
+  color: #fff;
+  font-family: var(--body-font-family);
+  font-size: var(--body-font-size-s);
+  font-weight: 500;
+  text-decoration: none;
+  border: 2px solid var(--main-accent-color);
+  box-sizing: border-box;
+  transition: background 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+}
+
+.promotion .promotion-card .promotion-cta a.button::after {
+  color: #fff;
+}
+
+.promotion .promotion-card .promotion-cta a.button:hover {
+  background: transparent;
+  color: var(--main-accent-color);
+}
+
+.promotion .promotion-card .promotion-cta a.button:hover::after {
+  color: var(--main-accent-color);
+}
+
+/* ─── Author placeholder ─── */
+.promotion .promotion-card.promotion-placeholder {
+  border: 2px dashed var(--main-accent-color);
+  min-height: 180px;
+}
+
+.promotion .promotion-card.promotion-placeholder .promotion-content {
+  align-items: center;
+  text-align: center;
+}
+
+.promotion .promotion-card.promotion-placeholder .promotion-title::after {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ─── Image-left layout ─── */
+.promotion .promotion-card.image-left {
+  flex-direction: row;
+  min-height: 400px;
+  background-size: cover;
+  background-position: left center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.promotion .promotion-card.image-left::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: inherit;
+  background-size: cover;
+  background-position: center;
+  z-index: 1;
+}
+
+.promotion .promotion-card.image-left .promotion-image { display: none; }
+
+.promotion .promotion-card.image-left .promotion-content {
+  margin-left: 50%;
+  position: relative;
+  z-index: 2;
+  background: var(--light-color);
+  padding: var(--spacing-xlarge);
+}
+
+/* ─── Image-right layout ─── */
+.promotion .promotion-card.image-right {
+  flex-direction: row;
+  min-height: 400px;
+  background-size: cover;
+  background-position: right center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.promotion .promotion-card.image-right::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  background: inherit;
+  background-size: cover;
+  background-position: center;
+  z-index: 1;
+}
+
+.promotion .promotion-card.image-right .promotion-image { display: none; }
+
+.promotion .promotion-card.image-right .promotion-content {
+  margin-right: 50%;
+  position: relative;
+  z-index: 2;
+  background: var(--light-color);
+  padding: var(--spacing-xlarge);
+}
+
+/* ─── Image-top layout ─── */
+.promotion .promotion-card.image-top {
+  flex-direction: column;
+  min-height: 400px;
+  background-size: contain;
+  background-position: center top;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.promotion .promotion-card.image-top .promotion-image { display: none; }
+
+.promotion .promotion-card.image-top .promotion-content {
+  margin-top: 50%;
+  position: relative;
+  z-index: 2;
+  background: var(--light-color);
+  padding: var(--spacing-xlarge);
+  text-align: center;
+  align-items: center;
+}
+
+/* ─── Image-bottom layout ─── */
+.promotion .promotion-card.image-bottom {
+  flex-direction: column;
+  min-height: 400px;
+  background-size: contain;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.promotion .promotion-card.image-bottom .promotion-image { display: none; }
+
+.promotion .promotion-card.image-bottom .promotion-content {
+  margin-bottom: 50%;
+  position: relative;
+  z-index: 2;
+  background: var(--light-color);
+  padding: var(--spacing-xlarge);
+  text-align: center;
+  align-items: center;
+}
+
+/* ─── Text colors for image layouts ─── */
+.promotion .promotion-card.image-left .promotion-title,
+.promotion .promotion-card.image-right .promotion-title,
+.promotion .promotion-card.image-top .promotion-title,
+.promotion .promotion-card.image-bottom .promotion-title {
+  color: var(--text-color);
+}
+
+.promotion .promotion-card.image-left .promotion-subtitle,
+.promotion .promotion-card.image-right .promotion-subtitle,
+.promotion .promotion-card.image-top .promotion-subtitle,
+.promotion .promotion-card.image-bottom .promotion-subtitle {
+  color: var(--dark-color);
+}
+
+/* ─── Text alignment ─── */
+.promotion .promotion-card .promotion-content.text-left {
+  text-align: left;
+  align-items: flex-start;
+}
+
+.promotion .promotion-card .promotion-content.text-left .promotion-title::after {
+  margin-left: 0;
+}
+
+.promotion .promotion-card .promotion-content.text-right {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.promotion .promotion-card .promotion-content.text-right .promotion-title::after {
+  margin-right: 0;
+  margin-left: auto;
+}
+
+.promotion .promotion-card .promotion-content.text-center {
+  text-align: center;
+  align-items: center;
+}
+
+.promotion .promotion-card .promotion-content.text-center .promotion-title::after {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ─── Responsive: stack on smaller screens ─── */
+@media (width < 900px) {
+  .promotion .promotion-card {
+    flex-direction: column;
+  }
+
+  .promotion .promotion-card .promotion-image {
+    flex: none;
+    max-width: 100%;
+    max-height: 280px;
+  }
+
+  .promotion .promotion-card .promotion-content {
+    padding: var(--spacing-xlarge) var(--spacing-large);
+  }
+
+  .promotion .promotion-card.image-left,
+  .promotion .promotion-card.image-right,
+  .promotion .promotion-card.image-top,
+  .promotion .promotion-card.image-bottom {
+    flex-direction: column;
+    background-position: center top;
+  }
+
+  .promotion .promotion-card.image-left::before,
+  .promotion .promotion-card.image-right::before {
+    width: 100%;
+    height: 250px;
+    position: relative;
+  }
+
+  .promotion .promotion-card.image-left .promotion-content,
+  .promotion .promotion-card.image-right .promotion-content {
+    margin-left: 0;
+    margin-right: 0;
+    padding: var(--spacing-xlarge) var(--spacing-large);
+    text-align: center;
+    align-items: center;
+  }
+
+  .promotion .promotion-card.image-top .promotion-content,
+  .promotion .promotion-card.image-bottom .promotion-content {
+    padding: var(--spacing-xlarge) var(--spacing-large);
+    text-align: center;
+    align-items: center;
+  }
+}
+
+@media (width < 600px) {
+  .promotion .promotion-card .promotion-content {
+    padding: var(--spacing-large) var(--spacing-medium);
+  }
+
+  .promotion .promotion-card .promotion-title {
+    font-size: var(--heading-font-size-s);
+  }
+
+  .promotion .promotion-card .promotion-image {
+    max-height: 200px;
+  }
+
+  .promotion .promotion-card.image-left::before,
+  .promotion .promotion-card.image-right::before {
+    height: 200px;
+  }
+
+  .promotion .promotion-card.image-top .promotion-content {
+    margin-top: 200px;
+  }
+
+  .promotion .promotion-card.image-bottom .promotion-content {
+    margin-bottom: 200px;
+  }
+}
