@@ -1,7 +1,7 @@
 /*
- * analytics — Demo Pilot usage tracking → Adobe Analytics. Ported unchanged
- * from the UE extension (host-agnostic: a direct XML POST to the Adobe
- * Analytics Data Insertion API, no SDK).
+ * analytics — Content Assistant usage tracking → Adobe Analytics. Ported
+ * unchanged from the UE extension (host-agnostic: a direct XML POST to the
+ * Adobe Analytics Data Insertion API, no SDK).
  *
  * Design: a module-level singleton holds the "global" eVars (org / site / AEM
  * host / user / imported brand) that ride on every event. The plugin shell
@@ -17,7 +17,7 @@
  *   eVar12 AEM program    (parsed from aemHost, when present)
  *   eVar13 AEM env        (parsed from aemHost, when present)
  *   eVar14 IMS org id
- *   eVar16 Extension name (static 'demo-pilot')
+ *   eVar16 Extension name (static 'content-assistance')
  *   eVar17 Imported brand (imported site host, e.g. www.ikea.com)
  *   eVar19 Action         (import-started | import-completed | image-copied |
  *                          text-copied | theme-applied)
@@ -26,8 +26,8 @@
 
 const REPORT_SUITE_ID = 'aemholreferencedemo';
 const ANALYTICS_URL = `https://aemhol0.112.2o7.net/b/ss/${REPORT_SUITE_ID}/6`;
-const EXTENSION_NAME = 'demo-pilot';
-const PAGE_NAME = 'DemoPilotUsageInfo';
+const EXTENSION_NAME = 'content-assistance';
+const PAGE_NAME = 'ContentAssistantUsageInfo';
 const USAGE_EVENT = 'event7';
 
 const EVAR = {
@@ -164,5 +164,5 @@ export function track(action) {
 }
 
 if (typeof window !== 'undefined') {
-  window.__demoPilotAnalytics = { log, context, EVENTS };
+  window.__contentAssistantAnalytics = { log, context, EVENTS };
 }

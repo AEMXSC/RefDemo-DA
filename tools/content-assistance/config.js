@@ -1,5 +1,5 @@
 /*
- * Extension-wide constants for the DA Demo Pilot library plugin.
+ * Extension-wide constants for the DA Content Assistant library plugin.
  */
 
 // Scraper backend — LiveDemos split into two hosts since the original UE
@@ -14,16 +14,16 @@ export const LIVEDEMOS_ASSETS_PATH = '/api/assets';
 
 // Deployed Adobe I/O Runtime action URLs — kept/added backend actions (all
 // operate on the AEM Assets HTTP API, not CRX/JCR). Deployed via
-// `aio app deploy` to the DAdemopilotEXT / Production workspace.
-export const UPLOAD_TO_DAM_ACTION_URL = 'https://3635370-966fuchsiacentipede.adobeioruntime.net/api/v1/web/demo-pilot/upload-to-dam';
-export const ENSURE_IMPORT_FOLDER_ACTION_URL = 'https://3635370-966fuchsiacentipede.adobeioruntime.net/api/v1/web/demo-pilot/ensure-import-folder';
+// `aio app deploy` to the DAContentAssistantEXT / Production workspace.
+export const UPLOAD_TO_DAM_ACTION_URL = 'https://3635370-966fuchsiacentipede.adobeioruntime.net/api/v1/web/content-assistance/upload-to-dam';
+export const ENSURE_IMPORT_FOLDER_ACTION_URL = 'https://3635370-966fuchsiacentipede.adobeioruntime.net/api/v1/web/content-assistance/ensure-import-folder';
 // Fetches a DAM asset's bytes server-side (Bearer-token auth against AEM
 // Author) and returns them base64-encoded with CORS headers — needed because
 // browser <img>/fetch() against a bare DAM repo path resolves against the
 // wrong origin (the DA site's own delivery domain, not the AEM instance) and,
 // even pointed at the right host, Author isn't generally CORS-open to
 // arbitrary browser origins. See lib/clipboard.js.
-export const GET_DAM_ASSET_ACTION_URL = 'https://3635370-966fuchsiacentipede.adobeioruntime.net/api/v1/web/demo-pilot/get-dam-asset';
+export const GET_DAM_ASSET_ACTION_URL = 'https://3635370-966fuchsiacentipede.adobeioruntime.net/api/v1/web/content-assistance/get-dam-asset';
 // Fetches an arbitrary scraped-site image URL server-side and returns it
 // base64-encoded with CORS headers — needed because a browser fetch() of
 // that URL is blocked whenever the source site omits CORS headers on its
@@ -66,7 +66,7 @@ export const THEMES_FOLDER = '/themes';
 
 // Scraped-texts cache — a plain JSON doc under a hidden project folder
 // (mirrors the old /var/text-storage/{slug} JCR node, minus JCR).
-export const TEXTS_PATH = '/.da/demo-pilot/texts.json';
+export const TEXTS_PATH = '/.da/content-assistance/texts.json';
 
 // Root folder (in this DA site, via the Source API) that scraped images are
 // written into, one subfolder per scraped site's hostname — see

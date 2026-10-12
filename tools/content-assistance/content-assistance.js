@@ -1,9 +1,7 @@
 /*
- * demo-pilot — DA library plugin shell. Boots via the DA App SDK, resolves
- * IMS user email + analytics context, then renders the Images / Texts / Theme
- * tabs. Ported from the UE extension's DemoPilotRail.js — the biggest
- * differences: no `@adobe/uix-guest` polling loop (DA gives context once),
- * and no `editorActions` replace call (see lib/clipboard.js for why).
+ * Content Assistant — DA library plugin shell. Boots via the DA App SDK,
+ * resolves IMS user email + analytics context, then renders the Images /
+ * Fragments / Theme tabs.
  */
 
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
@@ -22,7 +20,7 @@ const TABS = [
   { id: 'theme', label: 'Theme', render: renderThemeTab },
 ];
 
-const root = document.getElementById('demo-pilot-root');
+const root = document.getElementById('content-assistance-root');
 
 const state = {
   activeTab: 'images',

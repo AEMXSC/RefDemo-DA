@@ -1,5 +1,5 @@
 /*
- * Minimal styling for the Demo Pilot DA library plugin. Kept intentionally
+ * Minimal styling for the Content Assistant DA library plugin. Kept intentionally
  * light — Super Lite (`sl-*` custom elements from da.live) supplies Adobe-like
  * form control styling; this file only handles layout.
  */
@@ -14,7 +14,7 @@ body {
   background: #fff;
 }
 
-#demo-pilot-root {
+#content-assistance-root {
   display: flex;
   flex-direction: column;
   height: 100vh;
