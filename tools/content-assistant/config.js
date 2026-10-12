@@ -87,7 +87,7 @@ export const CATALOG_SHEET_NAME = 'data';
 // THEMES_FOLDER flow above (built for the UE-based site, kept as-is here).
 export const THEMES_ASSETS_FOLDER = '/assets/themes';
 
-// Site placeholders sheet (key/value rows) — same file tools/invoke-service
+// Site placeholders sheet (key/value rows) — same file tools/task-management
 // reads for "external-service-url" etc. lib/placeholders.js upserts the
 // "theme" key here to point at the brand-theme doc an author picked.
 export const PLACEHOLDERS_PATH = '/config/placeholders.json';

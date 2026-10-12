@@ -262,7 +262,7 @@ async function fetchUserProfile(token) {
     };
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.warn('[invoke-service] Failed to fetch user profile:', e);
+    console.warn('[task-management] Failed to fetch user profile:', e);
     return { userName: '', userEmail: '' };
   }
 }
@@ -300,17 +300,17 @@ function buildAemPageUrl(org, repo, path) {
 
 async function invokeExternalService(token, context) {
   // eslint-disable-next-line no-console
-  console.log('[invoke-service] DA SDK context →', JSON.stringify(context, null, 2));
+  console.log('[task-management] DA SDK context →', JSON.stringify(context, null, 2));
 
   const { org, repo, path } = resolveOrgRepo(context);
   // eslint-disable-next-line no-console
-  console.log('[invoke-service] Resolved →', { org, repo, path });
+  console.log('[task-management] Resolved →', { org, repo, path });
 
   const [profile, config] = await Promise.all([
     fetchUserProfile(token),
     fetchPlaceholders(org, repo).catch((err) => {
       // eslint-disable-next-line no-console
-      console.warn('[invoke-service] Placeholders fetch failed:', err);
+      console.warn('[task-management] Placeholders fetch failed:', err);
       return { externalServiceUrl: '', externalServicePayload: '' };
     }),
   ]);
@@ -328,7 +328,7 @@ async function invokeExternalService(token, context) {
       resolvedPayload = JSON.parse(config.externalServicePayload);
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.warn('[invoke-service] Failed to parse custom payload, using default:', e);
+      console.warn('[task-management] Failed to parse custom payload, using default:', e);
     }
   }
 
@@ -345,7 +345,7 @@ async function invokeExternalService(token, context) {
   resolvedPayload.aemPageUrl = buildAemPageUrl(org, repo, path);
 
   // eslint-disable-next-line no-console
-  console.log('[invoke-service] Calling service →', resolvedUrl);
+  console.log('[task-management] Calling service →', resolvedUrl);
 
   const resp = await fetch(resolvedUrl, {
     method: 'POST',
@@ -410,7 +410,7 @@ function taskProgressLabel(task) {
 
 /* ── Lit component ───────────────────────────────────────────────────── */
 
-class RefDemoInvokeService extends LitElement {
+class RefDemoTaskManagement extends LitElement {
   static properties = {
     token: { attribute: false },
     context: { attribute: false },
@@ -508,7 +508,7 @@ class RefDemoInvokeService extends LitElement {
       this._message = 'The external service executed successfully.';
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[invoke-service] Error:', err);
+      console.error('[task-management] Error:', err);
       this._isSuccess = false;
       this._message = err.message || 'An unexpected error occurred.';
     }
@@ -542,7 +542,7 @@ class RefDemoInvokeService extends LitElement {
       this._tasksState = 'loaded';
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[invoke-service] Tasks error:', err);
+      console.error('[task-management] Tasks error:', err);
       this._tasksError = err.message || 'Failed to load tasks.';
       this._tasksState = 'error';
     }
@@ -566,7 +566,7 @@ class RefDemoInvokeService extends LitElement {
       await this.loadTasks(); // refresh after a successful transition
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[invoke-service] Task action error:', err);
+      console.error('[task-management] Task action error:', err);
       this._tasksError = err.message || 'Failed to update task.';
       this._tasksState = 'error';
     } finally {
@@ -578,15 +578,15 @@ class RefDemoInvokeService extends LitElement {
 
   renderConfirm() {
     return html`
-      <div class="invoke-service-panel">
-        <p class="invoke-service-message">
+      <div class="task-management-panel">
+        <p class="task-management-message">
           Invoke the external service for this document?
           <span class="info-tip" tabindex="0" role="button" aria-label="Endpoint configuration info">
             ${ACTION_ICONS.info()}
             <span class="info-tip-bubble" role="tooltip">Submission endpoint can be configured in the placeholders file with key : external-service-url</span>
           </span>
         </p>
-        <div class="invoke-service-actions">
+        <div class="task-management-actions">
           <sl-button class="secondary" @click=${this.close}>Cancel</sl-button>
           <sl-button ?disabled=${!this._serviceUrl} @click=${this.run}>Confirm</sl-button>
         </div>
@@ -595,13 +595,13 @@ class RefDemoInvokeService extends LitElement {
 
   renderResult() {
     return html`
-      <div class="invoke-service-panel">
-        <div class="invoke-service-result">
-          <div class="invoke-service-icon">${this._isSuccess ? iconSuccess() : iconFailure()}</div>
-          <p class="invoke-service-label">${this._isSuccess ? 'Success' : 'Failed'}</p>
-          <p class="invoke-service-detail">${this._message}</p>
+      <div class="task-management-panel">
+        <div class="task-management-result">
+          <div class="task-management-icon">${this._isSuccess ? iconSuccess() : iconFailure()}</div>
+          <p class="task-management-label">${this._isSuccess ? 'Success' : 'Failed'}</p>
+          <p class="task-management-detail">${this._message}</p>
         </div>
-        <div class="invoke-service-actions">
+        <div class="task-management-actions">
           <sl-button @click=${this.close}>Close</sl-button>
         </div>
       </div>`;
@@ -609,13 +609,13 @@ class RefDemoInvokeService extends LitElement {
 
   renderNoAccess() {
     return html`
-      <div class="invoke-service-panel">
-        <div class="invoke-service-result">
-          <div class="invoke-service-icon">${iconFailure()}</div>
-          <p class="invoke-service-label">Access denied</p>
-          <p class="invoke-service-detail">You do not have permission to run this extension. Please contact an Adobe administrator if you believe this is a mistake.</p>
+      <div class="task-management-panel">
+        <div class="task-management-result">
+          <div class="task-management-icon">${iconFailure()}</div>
+          <p class="task-management-label">Access denied</p>
+          <p class="task-management-detail">You do not have permission to run this extension. Please contact an Adobe administrator if you believe this is a mistake.</p>
         </div>
-        <div class="invoke-service-actions">
+        <div class="task-management-actions">
           <sl-button @click=${this.close}>Close</sl-button>
         </div>
       </div>`;
@@ -625,10 +625,10 @@ class RefDemoInvokeService extends LitElement {
     switch (this._view) {
       case 'loading':
         return html`
-          <div class="invoke-service-panel">
-            <div class="invoke-service-loading">
+          <div class="task-management-panel">
+            <div class="task-management-loading">
               <div class="spinner" aria-hidden="true"></div>
-              <p class="invoke-service-message">Executing external service…</p>
+              <p class="task-management-message">Executing external service…</p>
             </div>
           </div>`;
       case 'result':
@@ -696,26 +696,26 @@ class RefDemoInvokeService extends LitElement {
     switch (this._tasksState) {
       case 'loading':
         return html`
-          <div class="invoke-service-panel">
-            <div class="invoke-service-loading">
+          <div class="task-management-panel">
+            <div class="task-management-loading">
               <div class="spinner" aria-hidden="true"></div>
-              <p class="invoke-service-message">Loading tasks…</p>
+              <p class="task-management-message">Loading tasks…</p>
             </div>
           </div>`;
       case 'error':
         return html`
-          <div class="invoke-service-panel">
-            <div class="invoke-service-result">
-              <div class="invoke-service-icon">${iconFailure()}</div>
-              <p class="invoke-service-detail">${this._tasksError}</p>
+          <div class="task-management-panel">
+            <div class="task-management-result">
+              <div class="task-management-icon">${iconFailure()}</div>
+              <p class="task-management-detail">${this._tasksError}</p>
             </div>
-            <div class="invoke-service-actions">
+            <div class="task-management-actions">
               <sl-button @click=${this.loadTasks}>Retry</sl-button>
             </div>
           </div>`;
       case 'loaded': {
         if (!this._tasks.length) {
-          return html`<div class="invoke-service-panel"><p class="invoke-service-message">No tasks assigned to you.</p></div>`;
+          return html`<div class="task-management-panel"><p class="task-management-message">No tasks assigned to you.</p></div>`;
         }
         const tasks = this.filteredTasks;
         const stats = this.taskStats;
@@ -737,7 +737,7 @@ class RefDemoInvokeService extends LitElement {
               @input=${(e) => { this._taskQuery = e.target.value; }} />
             ${tasks.length
     ? html`<ul class="task-list">${tasks.map((t) => this.renderTask(t))}</ul>`
-    : html`<p class="invoke-service-message">No tasks match “${this._taskQuery}”.</p>`}
+    : html`<p class="task-management-message">No tasks match “${this._taskQuery}”.</p>`}
           </div>`;
       }
       default:
@@ -770,14 +770,14 @@ class RefDemoInvokeService extends LitElement {
   }
 }
 
-customElements.define('refdemo-invoke-service', RefDemoInvokeService);
+customElements.define('refdemo-task-management', RefDemoTaskManagement);
 
 /* ── Init ────────────────────────────────────────────────────────────── */
 
 (async function init() {
   const { context, token, actions } = await DA_SDK;
 
-  const cmp = document.createElement('refdemo-invoke-service');
+  const cmp = document.createElement('refdemo-task-management');
   cmp.token = token;
   cmp.context = context;
   cmp.onClose = () => actions.closeLibrary();

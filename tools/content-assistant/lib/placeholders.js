@@ -1,6 +1,6 @@
 /*
  * placeholders — read/upsert single key/value rows in the site's
- * /config/placeholders.json sheet (the same file tools/invoke-service reads
+ * /config/placeholders.json sheet (the same file tools/task-management reads
  * for "external-service-url" etc.) via DA's Source API. Used by the Theme
  * tab's brand-theme browser to record which /assets/themes/... structured
  * content the site should use, under the "theme" key.

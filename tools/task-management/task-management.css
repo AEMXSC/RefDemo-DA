@@ -1,4 +1,4 @@
-/* Invoke External Service – DA Library Plugin (Lit / shadow DOM) */
+/* Task Management – DA Library Plugin (Lit / shadow DOM) */
 
 :host {
   display: flex;
@@ -50,7 +50,7 @@
 
 /* ── Shared panels ────────────────────────────────────────────────── */
 
-.invoke-service-panel {
+.task-management-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,13 +59,13 @@
   width: 100%;
 }
 
-.invoke-service-message {
+.task-management-message {
   margin: 0;
   font-size: 14px;
   color: var(--spectrum-global-color-gray-800, #4b4b4b);
 }
 
-.invoke-service-actions {
+.task-management-actions {
   display: flex;
   gap: 12px;
   justify-content: center;
@@ -81,7 +81,7 @@
 }
 
 /* Loading */
-.invoke-service-loading {
+.task-management-loading {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -93,33 +93,33 @@
   border: 3px solid var(--spectrum-global-color-gray-300, #d3d3d3);
   border-top-color: var(--spectrum-global-color-blue-600, #1473e6);
   border-radius: 50%;
-  animation: invoke-service-spin 0.8s linear infinite;
+  animation: task-management-spin 0.8s linear infinite;
 }
 
-@keyframes invoke-service-spin {
+@keyframes task-management-spin {
   to { transform: rotate(360deg); }
 }
 
 /* Result */
-.invoke-service-result {
+.task-management-result {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
 }
 
-.invoke-service-icon svg {
+.task-management-icon svg {
   display: block;
 }
 
-.invoke-service-label {
+.task-management-label {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
   color: var(--spectrum-global-color-gray-900, #323232);
 }
 
-.invoke-service-detail {
+.task-management-detail {
   margin: 0;
   font-size: 13px;
   color: var(--spectrum-global-color-gray-700, #6e6e6e);
