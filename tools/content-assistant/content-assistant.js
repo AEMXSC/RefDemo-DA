@@ -20,7 +20,7 @@ const TABS = [
   { id: 'theme', label: 'Theme', render: renderThemeTab },
 ];
 
-const root = document.getElementById('content-assistance-root');
+const root = document.getElementById('content-assistant-root');
 
 const state = {
   activeTab: 'images',

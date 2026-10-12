@@ -17,7 +17,7 @@
  *   eVar12 AEM program    (parsed from aemHost, when present)
  *   eVar13 AEM env        (parsed from aemHost, when present)
  *   eVar14 IMS org id
- *   eVar16 Extension name (static 'content-assistance')
+ *   eVar16 Extension name (static 'content-assistant')
  *   eVar17 Imported brand (imported site host, e.g. www.ikea.com)
  *   eVar19 Action         (import-started | import-completed | image-copied |
  *                          text-copied | theme-applied)
@@ -26,7 +26,7 @@
 
 const REPORT_SUITE_ID = 'aemholreferencedemo';
 const ANALYTICS_URL = `https://aemhol0.112.2o7.net/b/ss/${REPORT_SUITE_ID}/6`;
-const EXTENSION_NAME = 'content-assistance';
+const EXTENSION_NAME = 'content-assistant';
 const PAGE_NAME = 'ContentAssistantUsageInfo';
 const USAGE_EVENT = 'event7';
 

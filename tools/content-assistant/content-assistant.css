@@ -14,7 +14,7 @@ body {
   background: #fff;
 }
 
-#content-assistance-root {
+#content-assistant-root {
   display: flex;
   flex-direction: column;
   height: 100vh;
