@@ -175,6 +175,18 @@ function toNumberOrZero(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+const STATUS_LABELS = {
+  NEW: 'New',
+  INP: 'In Progress',
+  CPL: 'Complete',
+  REJ: 'Rejected',
+};
+
+function getStatusLabel(status) {
+  const s = (status || '').toUpperCase();
+  return STATUS_LABELS[s] || status || '';
+}
+
 function getStatusSortRank(status) {
   const s = (status || '').toUpperCase();
   if (s === 'NEW') return 0;
@@ -203,7 +215,7 @@ async function fetchWorkfrontTasks(url, assignedToId, token, config = {}) {
     id: row.ID,
     projectId: row.projectID || row.project?.ID || '',
     status: (row.status || '').toUpperCase(),
-    statusLabel: row.status || '',
+    statusLabel: getStatusLabel(row.status),
     taskUiUrl: buildWorkfrontTaskUiUrl(config, row.ID) || row.URL || '',
     projectUiUrl: buildWorkfrontProjectUiUrl(config, row.projectID || row.project?.ID || ''),
   }));

@@ -271,7 +271,7 @@
   margin-left: auto;
   font-size: 10px;
   font-weight: 700;
-  text-transform: uppercase;
+  white-space: nowrap;
   letter-spacing: 0.04em;
   padding: 1px 6px;
   border-radius: 10px;
