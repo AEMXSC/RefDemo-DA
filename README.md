@@ -32,3 +32,11 @@ npm run lint
 1. Install the [AEM CLI](https://github.com/adobe/helix-cli): `npm install -g @adobe/aem-cli`
 1. Start AEM Proxy: `aem up` (opens your browser at `http://localhost:3000`)
 1. Open the `{repo}` directory in your favorite IDE and start coding :)
+
+## Task Management DA plugin
+
+Both Task Management HTML entry points require the `da-lit` import map.
+The plugin reads its existing `/config/placeholders.json` sheet from the
+plugin's own origin to avoid cross-origin requests from DA preview to live EDS.
+Preview the sheet for preview testing and publish it for live use.
+Do not store credentials in this publicly served sheet.

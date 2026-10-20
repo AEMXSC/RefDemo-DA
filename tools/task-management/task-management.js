@@ -41,8 +41,8 @@ const ACTION_ICONS = {
 
 /* ── Placeholders config ─────────────────────────────────────────────── */
 
-function buildPlaceholdersUrl(org, repo) {
-  return `https://main--${repo}--${org}.aem.live/config/placeholders.json`;
+function buildPlaceholdersUrl() {
+  return '/config/placeholders.json';
 }
 
 // Shared key/value reader for /config/placeholders.json
