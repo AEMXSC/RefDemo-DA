@@ -412,6 +412,146 @@
   color: var(--spectrum-global-color-gray-700, #6e6e6e);
 }
 
+/* Task comments */
+.icon-btn.comment-btn {
+  position: relative;
+}
+
+.icon-btn.comment-btn.active {
+  border-color: var(--spectrum-global-color-blue-600, #1473e6);
+  color: var(--spectrum-global-color-blue-600, #1473e6);
+  background: #e0f2ff;
+}
+
+.icon-btn.comment-btn.has-comments::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--spectrum-global-color-blue-600, #1473e6);
+  border: 1px solid #fff;
+}
+
+.task-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--spectrum-global-color-gray-200, #e6e6e6);
+}
+
+.task-comments .comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.task-comments .comment {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--spectrum-global-color-gray-75, #fafafa);
+  border: 1px solid var(--spectrum-global-color-gray-200, #e6e6e6);
+}
+
+.task-comments .comment-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--spectrum-global-color-gray-600, #808080);
+}
+
+.task-comments .comment-author {
+  font-weight: 700;
+  color: var(--spectrum-global-color-gray-800, #4b4b4b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-comments .comment-date {
+  flex-shrink: 0;
+}
+
+.task-comments .comment-text {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--spectrum-global-color-gray-900, #323232);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.task-comments .comments-empty,
+.task-comments .comments-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--spectrum-global-color-gray-600, #808080);
+}
+
+.task-comments .comments-error {
+  color: #d7373f;
+}
+
+.task-comments .comments-loading {
+  display: flex;
+  justify-content: center;
+}
+
+.task-comments .comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.task-comments .comment-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+  color: var(--spectrum-global-color-gray-900, #323232);
+  border: 1px solid var(--spectrum-global-color-gray-300, #d3d3d3);
+  border-radius: 6px;
+  outline: none;
+}
+
+.task-comments .comment-input:focus {
+  border-color: var(--spectrum-global-color-blue-600, #1473e6);
+}
+
+.task-comments .comment-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.task-comments .comment-submit {
+  padding: 4px 14px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--spectrum-global-color-blue-600, #1473e6);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.task-comments .comment-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Info tip (Service tab) */
 .info-tip {
   position: relative;

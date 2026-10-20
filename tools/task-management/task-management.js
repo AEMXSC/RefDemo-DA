@@ -37,6 +37,7 @@ const ACTION_ICONS = {
   clock: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>`,
   refresh: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v5h-5"></path></svg>`,
   info: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg>`,
+  comment: () => html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>`,
 };
 
 /* ── Placeholders config ─────────────────────────────────────────────── */
@@ -79,6 +80,9 @@ const WORKFRONT_API_BASE = `/attask/api/${WORKFRONT_API_VERSION}`;
 const WORKFRONT_USER_PATH = `${WORKFRONT_API_BASE}/user/search`;
 const WORKFRONT_TASKS_SEARCH_PATH = `${WORKFRONT_API_BASE}/task/search`;
 const WORKFRONT_TASK_ACTION_PATH = `${WORKFRONT_API_BASE}/task`;
+const WORKFRONT_NOTE_PATH = `${WORKFRONT_API_BASE}/note`;
+const WORKFRONT_NOTE_SEARCH_PATH = `${WORKFRONT_NOTE_PATH}/search`;
+const COMMENT_MAX_LENGTH = 2000;
 const AIO_WF_ACTION_ENDPOINT = 'https://675172-referencedemopartner-stage.adobeioruntime.net/api/v1/web/ref-demo-api-gateway/wf-actions';
 
 // Workfront endpoints derived from a single "workfront-instance-url"
@@ -255,6 +259,51 @@ async function updateWorkfrontTask(url, task, action, token) {
   if (!resp.ok) {
     const body = await resp.text();
     throw new Error(`Workfront update failed: ${resp.status} – ${body}`);
+  }
+  return resp.json();
+}
+
+/* ── Workfront task comments (Notes) ─────────────────────────────────── */
+
+async function fetchTaskComments(instance, taskId, token) {
+  const target = new URL(AIO_WF_ACTION_ENDPOINT);
+  target.searchParams.set('url', `${instance}${WORKFRONT_NOTE_SEARCH_PATH}`);
+  target.searchParams.set('method', 'GET');
+  target.searchParams.set('noteObjCode', 'TASK');
+  target.searchParams.set('objID', taskId);
+  target.searchParams.set('fields', 'noteText,entryDate,owner:name');
+  target.searchParams.set('entryDate_Sort', 'desc');
+  target.searchParams.set('$$LIMIT', '50');
+
+  const resp = await fetch(target.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) throw new Error(`Workfront comments fetch failed: ${resp.status}`);
+
+  const json = await resp.json();
+  return (json.data || []).map((n) => ({
+    id: n.ID,
+    text: n.noteText || '',
+    date: n.entryDate || '',
+    author: n.owner?.name || '',
+  }));
+}
+
+async function addTaskComment(instance, taskId, text, token) {
+  const target = new URL(AIO_WF_ACTION_ENDPOINT);
+  target.searchParams.set('url', `${instance}${WORKFRONT_NOTE_PATH}`);
+  target.searchParams.set('method', 'POST');
+  target.searchParams.set('noteObjCode', 'TASK');
+  target.searchParams.set('objID', taskId);
+  target.searchParams.set('noteText', text);
+
+  const resp = await fetch(target.toString(), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`Workfront comment failed: ${resp.status} – ${body}`);
   }
   return resp.json();
 }
@@ -459,6 +508,12 @@ class RefDemoTaskManagement extends LitElement {
     _tasksError: { state: true },
     _busyTaskId: { state: true },
     _taskQuery: { state: true },
+    // Task comments
+    _commentsTaskId: { state: true }, // task whose comment thread is open
+    _comments: { state: true }, // { [taskId]: { state, items, error } }
+    _commentDraft: { state: true },
+    _commentPosting: { state: true },
+    _commentError: { state: true },
   };
 
   constructor() {
@@ -469,6 +524,9 @@ class RefDemoTaskManagement extends LitElement {
     this._tasksState = 'idle';
     this._tasks = [];
     this._taskQuery = '';
+    this._comments = {};
+    this._commentDraft = '';
+    this._commentPosting = false;
     this._progressIndex = 0;
     this._progressTicker = null;
     this._slowHintTimer = null;
@@ -668,6 +726,70 @@ class RefDemoTaskManagement extends LitElement {
     }
   }
 
+  /* ── Task comments ── */
+
+  async getWorkfrontInstance() {
+    const { org, repo } = resolveOrgRepo(this.context);
+    const cfg = await fetchWorkfrontConfig(org, repo);
+    if (!cfg.instance) {
+      throw new Error('Workfront instance URL is not configured. Add a "workfront-instance-url" entry to /config/placeholders.json.');
+    }
+    return cfg.instance;
+  }
+
+  setTaskComments(taskId, value) {
+    this._comments = { ...this._comments, [taskId]: value };
+  }
+
+  toggleComments(task) {
+    if (this._commentsTaskId === task.id) {
+      this._commentsTaskId = undefined;
+      return;
+    }
+    this._commentsTaskId = task.id;
+    this._commentDraft = '';
+    this._commentError = undefined;
+    this.loadComments(task.id);
+  }
+
+  async loadComments(taskId) {
+    const prev = this._comments[taskId];
+    this.setTaskComments(taskId, { state: 'loading', items: prev?.items || [] });
+    try {
+      const instance = await this.getWorkfrontInstance();
+      const items = await fetchTaskComments(instance, taskId, this.token);
+      this.setTaskComments(taskId, { state: 'loaded', items });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[task-management] Comments error:', err);
+      this.setTaskComments(taskId, {
+        state: 'error',
+        items: prev?.items || [],
+        error: err.message || 'Failed to load comments.',
+      });
+    }
+  }
+
+  async postComment(task) {
+    const text = (this._commentDraft || '').trim();
+    if (!text || this._commentPosting) return;
+    this._commentPosting = true;
+    this._commentError = undefined;
+    try {
+      const instance = await this.getWorkfrontInstance();
+      await addTaskComment(instance, task.id, text, this.token);
+      this._commentDraft = '';
+      this._tasks = this._tasks.map((t) => (t.id === task.id ? { ...t, hasNotes: true } : t));
+      await this.loadComments(task.id);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[task-management] Post comment error:', err);
+      this._commentError = err.message || 'Failed to post comment.';
+    } finally {
+      this._commentPosting = false;
+    }
+  }
+
   /* ── Renderers ── */
 
   renderConfirm() {
@@ -748,6 +870,7 @@ class RefDemoTaskManagement extends LitElement {
     const overdue = isTaskOverdue(task);
     const pct = Math.round(task.percentComplete || 0);
     const statusClass = (task.status || '').toLowerCase();
+    const commentsOpen = this._commentsTaskId === task.id;
     return html`
       <li class="task">
         <div class="task-head">
@@ -768,6 +891,12 @@ class RefDemoTaskManagement extends LitElement {
                   ?disabled=${disabled}
                   @click=${() => { if (!disabled) this.runTaskAction(task, a); }}>${ACTION_ICONS[a.icon]()}</button>`;
   })}`}
+            <button
+              class="icon-btn comment-btn ${commentsOpen ? 'active' : ''} ${task.hasNotes ? 'has-comments' : ''}"
+              title=${task.hasNotes ? 'Comments' : 'Add comment'}
+              aria-label="Comments"
+              aria-expanded=${commentsOpen ? 'true' : 'false'}
+              @click=${() => this.toggleComments(task)}>${ACTION_ICONS.comment()}</button>
           </div>
         </div>
         <div class="task-sub">
@@ -783,7 +912,59 @@ class RefDemoTaskManagement extends LitElement {
           </div>
           ${due ? html`<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? ACTION_ICONS.clock() : nothing}${due}</span>` : nothing}
         </div>
+        ${commentsOpen ? this.renderComments(task) : nothing}
       </li>`;
+  }
+
+  renderComments(task) {
+    const thread = this._comments[task.id] || { state: 'loading', items: [] };
+    const draft = this._commentDraft || '';
+    const canPost = !!draft.trim() && !this._commentPosting;
+    let list;
+    if (thread.state === 'loading' && !thread.items.length) {
+      list = html`<div class="comments-loading"><div class="spinner" aria-hidden="true"></div></div>`;
+    } else if (thread.state === 'error') {
+      list = html`<p class="comments-error" role="alert">${thread.error}</p>`;
+    } else if (!thread.items.length) {
+      list = html`<p class="comments-empty">No comments yet.</p>`;
+    } else {
+      list = html`
+        <ul class="comment-list">
+          ${thread.items.map((c) => html`
+            <li class="comment">
+              <div class="comment-meta">
+                <span class="comment-author">${c.author || 'Unknown'}</span>
+                <span class="comment-date">${formatTaskDate(c.date)}</span>
+              </div>
+              <p class="comment-text">${c.text}</p>
+            </li>`)}
+        </ul>`;
+    }
+    return html`
+      <div class="task-comments">
+        ${list}
+        <form class="comment-form" @submit=${(e) => { e.preventDefault(); this.postComment(task); }}>
+          <textarea
+            class="comment-input"
+            rows="2"
+            maxlength=${COMMENT_MAX_LENGTH}
+            placeholder="Add a comment…"
+            aria-label="Add a comment"
+            .value=${draft}
+            ?disabled=${this._commentPosting}
+            @input=${(e) => { this._commentDraft = e.target.value; }}
+            @keydown=${(e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      this.postComment(task);
+    }
+  }}></textarea>
+          ${this._commentError ? html`<p class="comments-error" role="alert">${this._commentError}</p>` : nothing}
+          <div class="comment-form-actions">
+            <button type="submit" class="comment-submit" ?disabled=${!canPost}>${this._commentPosting ? 'Posting…' : 'Post'}</button>
+          </div>
+        </form>
+      </div>`;
   }
 
   renderTasks() {
