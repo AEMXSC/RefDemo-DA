@@ -296,9 +296,21 @@ function buildAemPageUrl(org, repo, path) {
   return `https://main--${repo}--${org}.aem.live${normalizedPath}`;
 }
 
+const REVIEW_PROGRESS_SEQUENCE = [
+  'Fetching page details…',
+  'Collecting user details…',
+  'Creating project in Workfront…',
+  'Creating review task…',
+  'Assigning it to the user…',
+  'Nearly completed…',
+];
+
+const REVIEW_SLOW_HINT = 'About to finish... just a few more seconds...';
+
 /* ── External service call ───────────────────────────────────────────── */
 
-async function invokeExternalService(token, context) {
+async function invokeExternalService(token, context, onProgress = () => {}) {
+  onProgress('Fetching page details…');
   // eslint-disable-next-line no-console
   console.log('[task-management] DA SDK context →', JSON.stringify(context, null, 2));
 
@@ -306,6 +318,7 @@ async function invokeExternalService(token, context) {
   // eslint-disable-next-line no-console
   console.log('[task-management] Resolved →', { org, repo, path });
 
+  onProgress('Collecting user details…');
   const [profile, config] = await Promise.all([
     fetchUserProfile(token),
     fetchPlaceholders(org, repo).catch((err) => {
@@ -344,6 +357,7 @@ async function invokeExternalService(token, context) {
 
   resolvedPayload.aemPageUrl = buildAemPageUrl(org, repo, path);
 
+  onProgress('Creating project in Workfront…');
   // eslint-disable-next-line no-console
   console.log('[task-management] Calling service →', resolvedUrl);
 
@@ -360,7 +374,11 @@ async function invokeExternalService(token, context) {
     throw new Error(`External service error: ${resp.status} – ${errorBody}`);
   }
 
-  return resp.json();
+  onProgress('Creating review task…');
+  const result = await resp.json();
+  onProgress('Assigning it to the user…');
+  onProgress('Nearly completed…');
+  return result;
 }
 
 // Every task always shows the same set of action buttons; each one is disabled
@@ -421,6 +439,7 @@ class RefDemoTaskManagement extends LitElement {
     _view: { state: true }, // 'confirm' | 'loading' | 'result'
     _isSuccess: { state: true },
     _message: { state: true },
+    _loadingMessage: { state: true },
     _serviceUrl: { state: true },
     // Tasks tab
     _tasksState: { state: true }, // 'idle' | 'loading' | 'loaded' | 'error'
@@ -434,9 +453,63 @@ class RefDemoTaskManagement extends LitElement {
     super();
     this._tab = 'tasks';
     this._view = 'confirm';
+    [this._loadingMessage] = REVIEW_PROGRESS_SEQUENCE;
     this._tasksState = 'idle';
     this._tasks = [];
     this._taskQuery = '';
+    this._progressIndex = 0;
+    this._progressTicker = null;
+    this._slowHintTimer = null;
+    this._slowHintShown = false;
+  }
+
+  setLoadingMessage(message) {
+    this._loadingMessage = message;
+  }
+
+  advanceProgressTo(index) {
+    const bounded = Math.max(0, Math.min(index, REVIEW_PROGRESS_SEQUENCE.length - 1));
+    if (bounded <= this._progressIndex) return;
+    this._progressIndex = bounded;
+    this.setLoadingMessage(REVIEW_PROGRESS_SEQUENCE[this._progressIndex]);
+  }
+
+  handleServiceProgress(message) {
+    const idx = REVIEW_PROGRESS_SEQUENCE.indexOf(message);
+    if (idx !== -1) this.advanceProgressTo(idx);
+  }
+
+  startProgressSequence() {
+    this.stopProgressSequence();
+    this._progressIndex = 0;
+    this._slowHintShown = false;
+    this.setLoadingMessage(REVIEW_PROGRESS_SEQUENCE[0]);
+
+    this._progressTicker = window.setInterval(() => {
+      if (this._view !== 'loading') return;
+      if (this._progressIndex < REVIEW_PROGRESS_SEQUENCE.length - 1) {
+        this.advanceProgressTo(this._progressIndex + 1);
+      }
+    }, 2000);
+
+    this._slowHintTimer = window.setTimeout(() => {
+      if (this._view !== 'loading') return;
+      if (this._progressIndex >= REVIEW_PROGRESS_SEQUENCE.length - 2 && !this._slowHintShown) {
+        this._slowHintShown = true;
+        this.setLoadingMessage(REVIEW_SLOW_HINT);
+      }
+    }, 12000);
+  }
+
+  stopProgressSequence() {
+    if (this._progressTicker) {
+      clearInterval(this._progressTicker);
+      this._progressTicker = null;
+    }
+    if (this._slowHintTimer) {
+      clearTimeout(this._slowHintTimer);
+      this._slowHintTimer = null;
+    }
   }
 
   get filteredTasks() {
@@ -502,15 +575,24 @@ class RefDemoTaskManagement extends LitElement {
 
   async run() {
     this._view = 'loading';
+    this.startProgressSequence();
     try {
-      await invokeExternalService(this.token, this.context);
+      await invokeExternalService(
+        this.token,
+        this.context,
+        (message) => this.handleServiceProgress(message),
+      );
+      this.advanceProgressTo(REVIEW_PROGRESS_SEQUENCE.length - 1);
+      this.setLoadingMessage('Done.');
       this._isSuccess = true;
-      this._message = 'The external service executed successfully.';
+      this._message = 'Done. Review request submitted.';
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[task-management] Error:', err);
       this._isSuccess = false;
-      this._message = err.message || 'An unexpected error occurred.';
+      this._message = err.message || 'Review request failed. Please try again.';
+    } finally {
+      this.stopProgressSequence();
     }
     this._view = 'result';
   }
@@ -580,15 +662,15 @@ class RefDemoTaskManagement extends LitElement {
     return html`
       <div class="task-management-panel">
         <p class="task-management-message">
-          Invoke the external service for this document?
+          Send this page for review?
           <span class="info-tip" tabindex="0" role="button" aria-label="Endpoint configuration info">
             ${ACTION_ICONS.info()}
             <span class="info-tip-bubble" role="tooltip">Submission endpoint can be configured in the placeholders file with key : external-service-url</span>
           </span>
         </p>
         <div class="task-management-actions">
-          <sl-button class="secondary" @click=${this.close}>Cancel</sl-button>
-          <sl-button ?disabled=${!this._serviceUrl} @click=${this.run}>Confirm</sl-button>
+          <sl-button class="secondary" @click=${this.close}>No</sl-button>
+          <sl-button ?disabled=${!this._serviceUrl} @click=${this.run}>Yes</sl-button>
         </div>
       </div>`;
   }
@@ -628,7 +710,7 @@ class RefDemoTaskManagement extends LitElement {
           <div class="task-management-panel">
             <div class="task-management-loading">
               <div class="spinner" aria-hidden="true"></div>
-              <p class="task-management-message">Executing external service…</p>
+              <p class="task-management-message">${this._loadingMessage}</p>
             </div>
           </div>`;
       case 'result':
@@ -762,7 +844,7 @@ class RefDemoTaskManagement extends LitElement {
     return html`
       <div class="tabs" role="tablist">
         ${this.renderTab('tasks', 'Tasks')}
-        ${this.renderTab('service', 'Service')}
+        ${this.renderTab('service', 'Request Approval')}
       </div>
       <div class="tab-panel" role="tabpanel">
         ${this._tab === 'service' ? this.renderService() : this.renderTasks()}
