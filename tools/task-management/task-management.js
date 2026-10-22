@@ -586,6 +586,8 @@ class RefDemoTaskManagement extends LitElement {
     _usersError: { state: true },
     _mentionedUsers: { state: true },
     _assigneeId: { state: true },
+    _assigneeSearch: { state: true },
+    _tagSearch: { state: true },
   };
 
   constructor() {
@@ -603,6 +605,8 @@ class RefDemoTaskManagement extends LitElement {
     this._usersState = 'idle';
     this._mentionedUsers = [];
     this._assigneeId = '';
+    this._assigneeSearch = undefined;
+    this._tagSearch = '';
     this._progressIndex = 0;
     this._progressTicker = null;
     this._slowHintTimer = null;
@@ -831,6 +835,8 @@ class RefDemoTaskManagement extends LitElement {
     this._commentNotice = '';
     this._mentionedUsers = [];
     this._assigneeId = task.assignedToID || '';
+    this._assigneeSearch = undefined;
+    this._tagSearch = '';
     this.loadComments(task.id);
     this.loadWorkfrontUsers();
   }
@@ -892,6 +898,10 @@ class RefDemoTaskManagement extends LitElement {
       return;
     }
     const currentTask = this._tasks.find((item) => item.id === task.id) || task;
+    if (!this.isAssigneeSelectionValid(currentTask)) {
+      this._commentError = 'Select a Workfront user from the suggestions or keep the current assignment.';
+      return;
+    }
     const reassign = !!this._assigneeId && this._assigneeId !== currentTask.assignedToID;
     const assignee = this._workfrontUsers.find((user) => user.ID === this._assigneeId);
     if (reassign && !assignee) {
@@ -913,6 +923,7 @@ class RefDemoTaskManagement extends LitElement {
         this._tasks = this._tasks.map((item) => (item.id === task.id
           ? { ...item, assignedToID: assignee.ID, assignedTo: { name: assignee.name } }
           : item));
+        this._assigneeSearch = undefined;
       }
       await addTaskComment(instance, task.id, text, this.token, mentions);
       this._commentDraft = '';
@@ -1060,11 +1071,76 @@ class RefDemoTaskManagement extends LitElement {
       </li>`;
   }
 
+  userPickerLabel(user) {
+    const label = `${user.name || user.ID}${user.emailAddr ? ` (${user.emailAddr})` : ''}`;
+    const duplicate = this._workfrontUsers.some((item) => item.ID !== user.ID
+      && item.name === user.name && item.emailAddr === user.emailAddr);
+    return duplicate ? `${label} [${user.ID}]` : label;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  keepAssignmentLabel(task) {
+    return `${task.assignedTo?.name || 'Current assignee'} (keep assignment)`;
+  }
+
+  isAssigneeSelectionValid(task) {
+    if (this._assigneeSearch === undefined) return true;
+    if (this._assigneeId === (task.assignedToID || '')) {
+      return this._assigneeSearch === this.keepAssignmentLabel(task);
+    }
+    return this._workfrontUsers.some((user) => user.ID === this._assigneeId
+      && this.userPickerLabel(user) === this._assigneeSearch);
+  }
+
+  renderUserPicker(task, kind) {
+    const tagging = kind === 'tag';
+    const label = tagging ? 'Tag a user' : 'Assign to';
+    const listId = `${kind}-users-${task.id}`;
+    const selected = this._workfrontUsers.find((user) => user.ID === this._assigneeId);
+    const value = tagging ? this._tagSearch : this._assigneeSearch
+      ?? (this._assigneeId === (task.assignedToID || '') || !selected
+        ? this.keepAssignmentLabel(task) : this.userPickerLabel(selected));
+    const users = this._workfrontUsers.filter((user) => (tagging
+      ? !this._mentionedUsers.some((item) => item.ID === user.ID)
+      : user.ID !== task.assignedToID));
+    return html`
+      <label class="comment-user-field">
+        ${label}
+        <input type="text" list=${listId} aria-label=${label}
+          autocomplete="off" placeholder="Search name or email…"
+          .value=${value}
+          ?disabled=${this._usersState !== 'loaded' || this._commentPosting}
+          @input=${(e) => {
+    const query = e.target.value;
+    const user = users.find((item) => this.userPickerLabel(item) === query);
+    if (tagging) {
+      this._tagSearch = query;
+      if (user) {
+        this.addMention(user.ID);
+        this._tagSearch = '';
+        e.target.value = '';
+      }
+    } else {
+      this._assigneeSearch = query;
+      if (user) this._assigneeId = user.ID;
+      else if (query === this.keepAssignmentLabel(task)) {
+        this._assigneeId = task.assignedToID || '';
+      }
+    }
+  }}
+          @keydown=${(e) => { if (e.key === 'Enter') e.preventDefault(); }} />
+        <datalist id=${listId}>
+          ${tagging ? nothing : html`<option value=${this.keepAssignmentLabel(task)}></option>`}
+          ${users.map((user) => html`<option value=${this.userPickerLabel(user)}></option>`)}
+        </datalist>
+      </label>`;
+  }
+
   renderComments(task) {
     const thread = this._comments[task.id] || { state: 'loading', items: [] };
     const draft = this._commentDraft || '';
     const canPost = !!draft.trim() && draft.trim().length <= COMMENT_MAX_LENGTH
-      && !this._commentPosting;
+      && !this._commentPosting && this.isAssigneeSelectionValid(task);
     const reassign = !!this._assigneeId && this._assigneeId !== task.assignedToID;
     const submitLabel = reassign ? 'Assign & Post' : 'Post';
     let list;
@@ -1115,20 +1191,10 @@ class RefDemoTaskManagement extends LitElement {
             <p class="comments-error" role="alert">${this._usersError}</p>
             <button type="button" @click=${this.loadWorkfrontUsers}>Retry loading users</button>
           ` : nothing}
-          <label class="comment-user-field">
-            Tag a user
-            <select
-              aria-label="Tag a user"
-              ?disabled=${this._usersState !== 'loaded' || this._commentPosting}
-              @change=${(e) => { this.addMention(e.target.value); e.target.value = ''; }}>
-              <option value="">Select a user to mention</option>
-              ${this._workfrontUsers.map((user) => html`
-                <option value=${user.ID}
-                  ?disabled=${this._mentionedUsers.some((item) => item.ID === user.ID)}>
-                  ${user.name || user.ID}${user.emailAddr ? ` (${user.emailAddr})` : ''}
-                </option>`)}
-            </select>
-          </label>
+          <div class="comment-user-fields">
+            ${this.renderUserPicker(task, 'tag')}
+            ${this.renderUserPicker(task, 'assign')}
+          </div>
           ${this._mentionedUsers.length ? html`
             <div class="comment-mentions" aria-label="Tagged users">
               ${this._mentionedUsers.map((user) => html`
@@ -1139,21 +1205,6 @@ class RefDemoTaskManagement extends LitElement {
   }}>${user.name || user.ID} (remove tag)</button>`)}
             </div>` : nothing}
           <div class="comment-form-actions">
-            <label class="comment-user-field">
-              Assign to
-              <select aria-label="Assign to"
-                ?disabled=${this._usersState !== 'loaded' || this._commentPosting}
-                @change=${(e) => { this._assigneeId = e.target.value; }}>
-                <option value=${task.assignedToID || ''}
-                  .selected=${this._assigneeId === (task.assignedToID || '')}>
-                  ${task.assignedTo?.name || 'Current assignee'} (keep assignment)
-                </option>
-                ${this._workfrontUsers.filter((user) => user.ID !== task.assignedToID)
-    .map((user) => html`<option value=${user.ID} .selected=${this._assigneeId === user.ID}>
-                  ${user.name || user.ID}${user.emailAddr ? ` (${user.emailAddr})` : ''}
-                </option>`)}
-              </select>
-            </label>
             <button type="submit" class="comment-submit" ?disabled=${!canPost}>
               ${this._commentPosting ? 'Posting…' : submitLabel}
             </button>
