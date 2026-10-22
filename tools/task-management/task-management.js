@@ -143,6 +143,55 @@ async function fetchWorkfrontUserId(instance, email, token) {
   return user ? user.ID : '';
 }
 
+async function fetchWorkfrontUsers(instance, token) {
+  const users = new Map();
+  const pageSize = 100;
+  for (let offset = 0; ; offset += pageSize) {
+    const target = new URL(AIO_WF_ACTION_ENDPOINT);
+    target.searchParams.set('url', `${instance}${WORKFRONT_USER_PATH}`);
+    target.searchParams.set('method', 'GET');
+    target.searchParams.set('isActive', 'true');
+    target.searchParams.set('fields', 'ID,name,emailAddr');
+    target.searchParams.set('name_Sort', 'asc');
+    target.searchParams.set('$$LIMIT', String(pageSize));
+    target.searchParams.set('$$FIRST', String(offset));
+    const resp = await fetch(target.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) throw new Error(`Workfront users fetch failed: ${resp.status}`);
+    const json = await resp.json();
+    if (json.error || !Array.isArray(json.data)) {
+      throw new Error(json.error?.message || 'Invalid Workfront users response.');
+    }
+    const previousSize = users.size;
+    json.data.forEach((user) => {
+      if (user.ID) users.set(user.ID, user);
+    });
+    if (json.data.length < pageSize) break;
+    if (users.size === previousSize) {
+      throw new Error('Workfront user pagination did not advance. Check the gateway filters.');
+    }
+  }
+  return [...users.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+
+async function reassignWorkfrontTask(instance, taskId, userId, token) {
+  const target = new URL(AIO_WF_ACTION_ENDPOINT);
+  target.searchParams.set('url', `${instance}${WORKFRONT_TASK_ACTION_PATH}/${taskId}`);
+  target.searchParams.set('method', 'PUT');
+  target.searchParams.set('assignedToID', userId);
+  target.searchParams.set('fields', 'ID,assignedToID');
+  const resp = await fetch(target.toString(), {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) throw new Error(`Workfront reassignment failed: ${resp.status}`);
+  const json = await resp.json();
+  if (json.error || json.data?.assignedToID !== userId) {
+    throw new Error(json.error?.message || 'Workfront did not confirm the new assignee.');
+  }
+}
+
 /* ── Workfront tasks ─────────────────────────────────────────────────── */
 
 // Fields requested for each task in the Workfront task/search call.
@@ -289,13 +338,26 @@ async function fetchTaskComments(instance, taskId, token) {
   }));
 }
 
-async function addTaskComment(instance, taskId, text, token) {
+async function addTaskComment(instance, taskId, text, token, mentionedUsers = []) {
   const target = new URL(AIO_WF_ACTION_ENDPOINT);
   target.searchParams.set('url', `${instance}${WORKFRONT_NOTE_PATH}`);
   target.searchParams.set('method', 'POST');
-  target.searchParams.set('noteObjCode', 'TASK');
-  target.searchParams.set('objID', taskId);
-  target.searchParams.set('noteText', text);
+  if (mentionedUsers.length) {
+    target.searchParams.set('updates', JSON.stringify({
+      noteObjCode: 'TASK',
+      objID: taskId,
+      noteText: text,
+      tags: mentionedUsers.map((user) => ({
+        objID: user.ID,
+        objObjCode: 'USER',
+        userID: user.ID,
+      })),
+    }));
+  } else {
+    target.searchParams.set('noteObjCode', 'TASK');
+    target.searchParams.set('objID', taskId);
+    target.searchParams.set('noteText', text);
+  }
 
   const resp = await fetch(target.toString(), {
     method: 'POST',
@@ -305,7 +367,11 @@ async function addTaskComment(instance, taskId, text, token) {
     const body = await resp.text();
     throw new Error(`Workfront comment failed: ${resp.status} – ${body}`);
   }
-  return resp.json();
+  const json = await resp.json();
+  if (json.error || !json.data?.ID) {
+    throw new Error(json.error?.message || 'Workfront did not confirm the comment was created.');
+  }
+  return json;
 }
 
 /* ── User profile ────────────────────────────────────────────────────── */
@@ -514,6 +580,12 @@ class RefDemoTaskManagement extends LitElement {
     _commentDraft: { state: true },
     _commentPosting: { state: true },
     _commentError: { state: true },
+    _commentNotice: { state: true },
+    _workfrontUsers: { state: true },
+    _usersState: { state: true },
+    _usersError: { state: true },
+    _mentionedUsers: { state: true },
+    _assigneeId: { state: true },
   };
 
   constructor() {
@@ -527,6 +599,10 @@ class RefDemoTaskManagement extends LitElement {
     this._comments = {};
     this._commentDraft = '';
     this._commentPosting = false;
+    this._workfrontUsers = [];
+    this._usersState = 'idle';
+    this._mentionedUsers = [];
+    this._assigneeId = '';
     this._progressIndex = 0;
     this._progressTicker = null;
     this._slowHintTimer = null;
@@ -679,6 +755,7 @@ class RefDemoTaskManagement extends LitElement {
   }
 
   async loadTasks() {
+    if (this._commentPosting) return;
     this._tasksState = 'loading';
     this._tasksError = undefined;
     try {
@@ -701,6 +778,7 @@ class RefDemoTaskManagement extends LitElement {
   }
 
   async runTaskAction(task, action) {
+    if (this._commentPosting) return;
     this._busyTaskId = task.id;
     this._tasksError = undefined;
     try {
@@ -742,6 +820,7 @@ class RefDemoTaskManagement extends LitElement {
   }
 
   toggleComments(task) {
+    if (this._commentPosting) return;
     if (this._commentsTaskId === task.id) {
       this._commentsTaskId = undefined;
       return;
@@ -749,7 +828,42 @@ class RefDemoTaskManagement extends LitElement {
     this._commentsTaskId = task.id;
     this._commentDraft = '';
     this._commentError = undefined;
+    this._commentNotice = '';
+    this._mentionedUsers = [];
+    this._assigneeId = task.assignedToID || '';
     this.loadComments(task.id);
+    this.loadWorkfrontUsers();
+  }
+
+  async loadWorkfrontUsers() {
+    if (this._usersState === 'loading' || this._usersState === 'loaded') return;
+    this._usersState = 'loading';
+    this._usersError = '';
+    try {
+      const instance = await this.getWorkfrontInstance();
+      this._workfrontUsers = await fetchWorkfrontUsers(instance, this.token);
+      this._usersState = 'loaded';
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[task-management] Users error:', err);
+      this._usersError = err.message || 'Failed to load Workfront users.';
+      this._usersState = 'error';
+    }
+  }
+
+  addMention(userId) {
+    const user = this._workfrontUsers.find((item) => item.ID === userId);
+    if (!user || this._mentionedUsers.some((item) => item.ID === userId)) return;
+    const mention = `@${user.name || user.emailAddr || user.ID}`;
+    const prefix = this._commentDraft.trimEnd();
+    const draft = `${prefix}${prefix ? ' ' : ''}${mention} `;
+    if (draft.length > COMMENT_MAX_LENGTH) {
+      this._commentError = `Comments cannot exceed ${COMMENT_MAX_LENGTH} characters.`;
+      return;
+    }
+    this._commentDraft = draft;
+    this._mentionedUsers = [...this._mentionedUsers, user];
+    this._commentError = undefined;
   }
 
   async loadComments(taskId) {
@@ -772,19 +886,49 @@ class RefDemoTaskManagement extends LitElement {
 
   async postComment(task) {
     const text = (this._commentDraft || '').trim();
-    if (!text || this._commentPosting) return;
+    if (this._commentPosting) return;
+    if (!text || text.length > COMMENT_MAX_LENGTH) {
+      this._commentError = `Enter a comment of 1 to ${COMMENT_MAX_LENGTH} characters.`;
+      return;
+    }
+    const currentTask = this._tasks.find((item) => item.id === task.id) || task;
+    const reassign = !!this._assigneeId && this._assigneeId !== currentTask.assignedToID;
+    const assignee = this._workfrontUsers.find((user) => user.ID === this._assigneeId);
+    if (reassign && !assignee) {
+      this._commentError = 'Select an available Workfront user before assigning.';
+      return;
+    }
+    const mentions = this._mentionedUsers.filter((user) => text.includes(
+      `@${user.name || user.emailAddr || user.ID}`,
+    ));
     this._commentPosting = true;
     this._commentError = undefined;
+    this._commentNotice = '';
+    let assigned = false;
     try {
       const instance = await this.getWorkfrontInstance();
-      await addTaskComment(instance, task.id, text, this.token);
+      if (reassign) {
+        await reassignWorkfrontTask(instance, task.id, assignee.ID, this.token);
+        assigned = true;
+        this._tasks = this._tasks.map((item) => (item.id === task.id
+          ? { ...item, assignedToID: assignee.ID, assignedTo: { name: assignee.name } }
+          : item));
+      }
+      await addTaskComment(instance, task.id, text, this.token, mentions);
       this._commentDraft = '';
+      this._mentionedUsers = [];
+      this._commentNotice = assigned
+        ? 'Task reassigned and comment posted. Refresh tasks to update your assigned list.'
+        : 'Comment posted.';
       this._tasks = this._tasks.map((t) => (t.id === task.id ? { ...t, hasNotes: true } : t));
       await this.loadComments(task.id);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[task-management] Post comment error:', err);
-      this._commentError = err.message || 'Failed to post comment.';
+      const message = err.message || 'Failed to post comment.';
+      this._commentError = assigned
+        ? `Task reassigned, but the comment was not confirmed. ${message} Check Workfront before retrying.`
+        : message;
     } finally {
       this._commentPosting = false;
     }
@@ -919,7 +1063,10 @@ class RefDemoTaskManagement extends LitElement {
   renderComments(task) {
     const thread = this._comments[task.id] || { state: 'loading', items: [] };
     const draft = this._commentDraft || '';
-    const canPost = !!draft.trim() && !this._commentPosting;
+    const canPost = !!draft.trim() && draft.trim().length <= COMMENT_MAX_LENGTH
+      && !this._commentPosting;
+    const reassign = !!this._assigneeId && this._assigneeId !== task.assignedToID;
+    const submitLabel = reassign ? 'Assign & Post' : 'Post';
     let list;
     if (thread.state === 'loading' && !thread.items.length) {
       list = html`<div class="comments-loading"><div class="spinner" aria-hidden="true"></div></div>`;
@@ -960,8 +1107,56 @@ class RefDemoTaskManagement extends LitElement {
     }
   }}></textarea>
           ${this._commentError ? html`<p class="comments-error" role="alert">${this._commentError}</p>` : nothing}
+          ${this._commentNotice
+    ? html`<p class="comment-notice" role="status">${this._commentNotice}</p>` : nothing}
+          ${this._usersState === 'loading'
+    ? html`<p class="comments-empty" role="status">Loading Workfront users…</p>` : nothing}
+          ${this._usersState === 'error' ? html`
+            <p class="comments-error" role="alert">${this._usersError}</p>
+            <button type="button" @click=${this.loadWorkfrontUsers}>Retry loading users</button>
+          ` : nothing}
+          <label class="comment-user-field">
+            Tag a user
+            <select
+              aria-label="Tag a user"
+              ?disabled=${this._usersState !== 'loaded' || this._commentPosting}
+              @change=${(e) => { this.addMention(e.target.value); e.target.value = ''; }}>
+              <option value="">Select a user to mention</option>
+              ${this._workfrontUsers.map((user) => html`
+                <option value=${user.ID}
+                  ?disabled=${this._mentionedUsers.some((item) => item.ID === user.ID)}>
+                  ${user.name || user.ID}${user.emailAddr ? ` (${user.emailAddr})` : ''}
+                </option>`)}
+            </select>
+          </label>
+          ${this._mentionedUsers.length ? html`
+            <div class="comment-mentions" aria-label="Tagged users">
+              ${this._mentionedUsers.map((user) => html`
+                <button type="button" ?disabled=${this._commentPosting}
+                  aria-label=${`Remove tag for ${user.name || user.ID}`}
+                  @click=${() => {
+    this._mentionedUsers = this._mentionedUsers.filter((item) => item.ID !== user.ID);
+  }}>${user.name || user.ID} (remove tag)</button>`)}
+            </div>` : nothing}
           <div class="comment-form-actions">
-            <button type="submit" class="comment-submit" ?disabled=${!canPost}>${this._commentPosting ? 'Posting…' : 'Post'}</button>
+            <label class="comment-user-field">
+              Assign to
+              <select aria-label="Assign to"
+                ?disabled=${this._usersState !== 'loaded' || this._commentPosting}
+                @change=${(e) => { this._assigneeId = e.target.value; }}>
+                <option value=${task.assignedToID || ''}
+                  .selected=${this._assigneeId === (task.assignedToID || '')}>
+                  ${task.assignedTo?.name || 'Current assignee'} (keep assignment)
+                </option>
+                ${this._workfrontUsers.filter((user) => user.ID !== task.assignedToID)
+    .map((user) => html`<option value=${user.ID} .selected=${this._assigneeId === user.ID}>
+                  ${user.name || user.ID}${user.emailAddr ? ` (${user.emailAddr})` : ''}
+                </option>`)}
+              </select>
+            </label>
+            <button type="submit" class="comment-submit" ?disabled=${!canPost}>
+              ${this._commentPosting ? 'Posting…' : submitLabel}
+            </button>
           </div>
         </form>
       </div>`;

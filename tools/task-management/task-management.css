@@ -533,6 +533,56 @@
 .task-comments .comment-form-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.task-comments .comment-user-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.task-comments .comment-form-actions .comment-user-field {
+  flex: 1 1 160px;
+}
+
+.task-comments .comment-user-field select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px;
+  font: inherit;
+  color: var(--spectrum-global-color-gray-900, #323232);
+  background: #fff;
+  border: 1px solid var(--spectrum-global-color-gray-300, #d3d3d3);
+  border-radius: 6px;
+}
+
+.task-comments .comment-mentions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.task-comments .comment-mentions button {
+  max-width: 100%;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  background: #e0f2ff;
+  border: 1px solid var(--spectrum-global-color-blue-600, #1473e6);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.task-comments .comment-notice {
+  margin: 0;
+  font-size: 12px;
+  color: #12805c;
 }
 
 .task-comments .comment-submit {
