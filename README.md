@@ -33,6 +33,12 @@ npm run lint
 1. Start AEM Proxy: `aem up` (opens your browser at `http://localhost:3000`)
 1. Open the `{repo}` directory in your favorite IDE and start coding :)
 
+## Header and footer in DA Layout
+
+The header stays sticky while retaining its space above the page content.
+Repeated page loads in DA Layout reuse existing header/footer blocks instead
+of appending duplicates; a newly replaced page body loads fresh blocks.
+
 ## Task Management DA plugin
 
 Both Task Management HTML entry points require the `da-lit` import map.

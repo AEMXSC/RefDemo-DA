@@ -323,9 +323,9 @@ body.green-theme {
 }
 
 header {
-  height: var(--nav-height);
+  height: auto;
   min-height: 90px;
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;

@@ -5,7 +5,7 @@ header .nav-wrapper {
   background-color: var(--dark-color-opacity);
   width: 100%;
   z-index: 2;
-  position: fixed;
+  position: relative;
 }
 
 header nav {
