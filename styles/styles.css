@@ -407,6 +407,14 @@ main > div {
   margin: 40px 16px;
 }
 
+main > div:first-child {
+  margin-top: 0;
+}
+
+main > div:first-child > .default-content-wrapper > :first-child {
+  margin-top: 0;
+}
+
 input,
 textarea,
 select,
