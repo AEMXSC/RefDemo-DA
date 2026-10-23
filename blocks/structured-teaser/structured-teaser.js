@@ -7,7 +7,7 @@ const SC_DELIVERY = 'https://da-sc.adobeaem.workers.dev';
 
 function currentSite() {
   const host = window.location.hostname;
-  const match = host.match(/^(?:[\w-]+?--)?([\w-]+?)--([\w-]+)\.aem\.(page|live)$/);
+  const match = host.match(/^(?:[\w-]+?--)?([\w-]+?)--([\w-]+)\.(?:aem\.(page|live)|preview\.da\.live)$/);
   if (!match) return null;
   return { repo: match[1], org: match[2], env: match[3] === 'live' ? 'live' : 'preview' };
 }
