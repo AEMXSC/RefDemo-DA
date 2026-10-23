@@ -131,10 +131,8 @@ export async function renderThemeTab(container, ctx) {
   }
 
   const themes = state.themes || [];
-  if (themes.length === 0) {
-    //listEl.innerHTML = '<p class="dp-status">No saved themes yet. Import from a live URL to create one.</p>';
-  } else {
-    listEl.innerHTML = '';
+  listEl.innerHTML = '';
+  if (themes.length > 0) {
     themes.forEach((theme) => {
       const card = document.createElement('div');
       card.className = 'dp-theme-card';
@@ -157,6 +155,10 @@ export async function renderThemeTab(container, ctx) {
       org: ctx.org,
       repo: ctx.repo,
       rootPath: THEMES_ASSETS_FOLDER,
+      onImport: () => container.querySelector('#dp-theme-import').click(),
+      onFolderState: ({ empty, error }) => {
+        container.querySelector('#dp-theme-browser-label').hidden = empty || error;
+      },
       onApply: async (themePath) => {
         try {
           await setPlaceholder({

@@ -48,9 +48,11 @@ async function fetchStructuredContent(org, repo, path) {
  * @param {string} opts.token
  * @param {string} opts.rootPath  Folder to start browsing at (THEMES_ASSETS_FOLDER)
  * @param {(themePath: string, fields: object, item: object) => void} opts.onApply
+ * @param {() => void} [opts.onImport]
+ * @param {(state: {empty: boolean, error: boolean}) => void} [opts.onFolderState]
  */
 export async function mountThemeBrowser(mount, {
-  org, repo, token, rootPath, onApply,
+  org, repo, token, rootPath, onApply, onImport, onFolderState,
 }) {
   mount.innerHTML = `
     <div class="dp-browser-sticky">
@@ -64,6 +66,7 @@ export async function mountThemeBrowser(mount, {
   const grid = mount.querySelector('#dp-theme-browser-grid');
 
   let currentItems = [];
+  let currentPath = rootPath;
   let renderFolder;
   // Bumped on every renderTiles() call — lets an in-flight fetch from a
   // superseded render (e.g. the search box re-rendering while a previous
@@ -76,7 +79,20 @@ export async function mountThemeBrowser(mount, {
     const myGeneration = renderGeneration;
     grid.innerHTML = '';
     if (!items.length) {
-      grid.innerHTML = '<p class="dp-status">Empty folder.</p>';
+      if (currentItems.length) {
+        grid.innerHTML = '<p class="dp-status" role="status">No themes match your search.</p>';
+      } else {
+        grid.innerHTML = `
+          <div class="dp-theme-empty" role="status">
+            <strong>No themes found</strong>
+            <p>${currentPath === rootPath
+    ? 'Import from a website URL to create your first brand theme.'
+    : 'This folder has no themes. Browse another folder or import a new theme.'}</p>
+            ${onImport ? '<button type="button" class="dp-theme-empty-import">Import from URL</button>' : ''}
+          </div>
+        `;
+        grid.querySelector('.dp-theme-empty-import')?.addEventListener('click', onImport);
+      }
       return;
     }
     items.forEach((item) => {
@@ -159,6 +175,10 @@ export async function mountThemeBrowser(mount, {
   }
 
   renderFolder = async function loadFolder(path) {
+    currentPath = path;
+    searchInput.hidden = true;
+    breadcrumbEl.hidden = path === rootPath;
+    renderGeneration += 1;
     grid.innerHTML = '<p class="dp-status">Loading…</p>';
     let items;
     try {
@@ -174,11 +194,15 @@ export async function mountThemeBrowser(mount, {
         return { ...item, path: isFolder(item) ? bare : bare.replace(/\.html$/i, '') };
       });
     } catch (err) {
-      grid.innerHTML = `<p class="dp-error">${(err && err.message) || 'Could not list folder.'}</p>`;
+      onFolderState?.({ empty: false, error: true });
+      grid.innerHTML = `<p class="dp-error" role="alert">${escapeHtml((err && err.message) || 'Could not list folder.')}</p>`;
       return;
     }
 
     currentItems = items;
+    searchInput.hidden = items.length === 0;
+    breadcrumbEl.hidden = items.length === 0 && path === rootPath;
+    onFolderState?.({ empty: items.length === 0 && path === rootPath, error: false });
     renderBreadcrumb(path);
     searchInput.value = '';
     renderTiles(items);
