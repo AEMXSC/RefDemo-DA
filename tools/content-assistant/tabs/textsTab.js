@@ -107,7 +107,7 @@ export default function renderTextsTab(container, ctx) {
     if (!loading && !error && filtered.length === 0) {
       emptyEl.hidden = false;
       emptyEl.textContent = items.length === 0
-        ? 'No structured content found.'
+        ? 'No Structured Content found'
         : 'No fragments match your search.';
     } else {
       emptyEl.hidden = true;
