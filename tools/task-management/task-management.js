@@ -420,7 +420,7 @@ function resolveOrgRepo(context) {
 
 function buildAemPageUrl(org, repo, path) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `https://main--${repo}--${org}.aem.live${normalizedPath}`;
+  return `https://main--${repo}--${org}.aem.page${normalizedPath}`;
 }
 
 const REVIEW_PROGRESS_SEQUENCE = [

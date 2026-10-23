@@ -40,3 +40,31 @@ The plugin reads its existing `/config/placeholders.json` sheet from the
 plugin's own origin to avoid cross-origin requests from DA preview to live EDS.
 Preview the sheet for preview testing and publish it for live use.
 Do not store credentials in this publicly served sheet.
+
+Review submissions link to the page's `main` branch preview URL on `aem.page`.
+
+## Content Assistant image folders
+
+Optional rows in the DA site's `/config/placeholders.json` sheet:
+
+| key | value example |
+| --- | --- |
+| `da-image-roots` | `/assets/images, /library/photos, /campaigns/assets` |
+| `aem-import-folder` | `/content/dam/my-project/imports` |
+
+`da-image-roots` accepts comma-separated or newline-separated site-relative
+absolute folder paths. Repeated rows are also supported. With multiple roots,
+the DA image browser provides an **Image folder** selector. Imports use the first
+root, followed by `<source-host>/<filename>`. With no configured roots, browsing
+starts at `/assets/images` and imports retain
+`/assets/images/<source-host>/<filename>`.
+
+The plugin reads this sheet through the authenticated DA Source API for the
+current site; publishing the sheet is not required for these image settings.
+Both `key/value` and `Key/Text` columns and multi-sheet documents are supported.
+Missing settings use defaults; read errors or invalid paths display a warning.
+
+AEM browsing always starts at `/content/dam` with folder navigation enabled,
+independently of the import destination. `aem-import-folder` is a single DAM
+folder used only for imports; it defaults to `/content/dam/imported-assets/en`.
+Authors still need permission to browse assets and write to the import folder.

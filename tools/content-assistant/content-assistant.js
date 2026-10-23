@@ -9,6 +9,7 @@ import { fetchUserEmail } from './lib/userProfile.js';
 import { setAnalyticsContext } from './lib/analytics.js';
 import { readTexts } from './lib/textStorage.js';
 import { fetchAemConfig } from './lib/aemConfig.js';
+import { fetchImageSettings } from './lib/placeholders.js';
 import { AEM_ORG_ID, AEM_ASSET_SELECTOR_API_KEY } from './config.js';
 import renderImagesTab from './tabs/imagesTab.js';
 import renderTextsTab from './tabs/textsTab.js';
@@ -130,6 +131,13 @@ function render(ctx) {
 
   state.texts = await readTexts({ org, repo, token }).catch(() => ({}));
 
+  let imageSettings = {};
+  try {
+    imageSettings = await fetchImageSettings({ org, repo, token });
+  } catch (err) {
+    showToast(`Image settings could not be loaded; using default folders. ${err.message}`, true);
+  }
+
   const ctx = {
     state,
     rerender: () => render(ctx),
@@ -144,7 +152,7 @@ function render(ctx) {
     authorUrl,
     orgId,
     assetSelectorApiKey,
-    damFolderPath: '/content/dam/imported-assets/en',
+    ...imageSettings,
   };
 
   render(ctx);

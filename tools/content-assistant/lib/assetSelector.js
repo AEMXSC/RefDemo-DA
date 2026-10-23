@@ -1,7 +1,7 @@
 /*
  * assetSelector — mounts Adobe's official AEM Assets Selector widget (loaded
  * from Adobe's CDN, no npm equivalent) so authors can browse the whole
- * imported-assets DAM folder, not just this session's scraped images. Ported
+ * DAM hierarchy, not just this session's scraped images. Ported
  * from the UE extension's ImagesTab.js — same widget, same options.
  */
 
@@ -102,7 +102,7 @@ export async function mountAssetSelector(mount, {
     noWrap: true,
     aemTierType: 'author',
     colorScheme: 'light',
-    hideTreeNav: true,
+    hideTreeNav: false,
     hideFiltersButton: true,
     selectionType: 'single',
     featureSet: ['upload', 'collections', 'detail-panel'],

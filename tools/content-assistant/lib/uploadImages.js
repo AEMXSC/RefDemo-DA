@@ -104,12 +104,13 @@ async function deliveryUrl({
  * @param {string} ctx.repo
  * @param {string} ctx.ref     Branch ref to preview/publish onto (default 'main')
  * @param {string} ctx.siteUrl Source page URL the images were scraped from
+ * @param {string} [ctx.rootPath] DA image root (default '/assets/images')
  * @yields {object} per-image result — { sourceUrl, ok, path?, url?, width?,
  *   height?, brand?, label?, error? }
  */
 export async function* uploadImagesToDa(sourceUrls, ctx) {
   const {
-    token, org, repo, ref, siteUrl,
+    token, org, repo, ref, siteUrl, rootPath = ASSETS_FOLDER,
   } = ctx || {};
   if (!token) throw new Error('uploadImagesToDa: missing token');
   if (!org || !repo) throw new Error('uploadImagesToDa: missing org/repo');
@@ -129,7 +130,7 @@ export async function* uploadImagesToDa(sourceUrls, ctx) {
       // fail to decode later, at copy time, with no way to tell why.
       if (blob.type === 'image/svg+xml') throw new Error('SVG image — not imported');
       const filename = filenameForUrl(sourceUrl, i);
-      const path = `${ASSETS_FOLDER}/${folder}/${filename}`;
+      const path = `${rootPath === '/' ? '' : rootPath}/${folder}/${filename}`;
       // eslint-disable-next-line no-await-in-loop
       await putBinarySource({
         org, repo, path, token, blob, filename,

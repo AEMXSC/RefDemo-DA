@@ -73,13 +73,21 @@ const COPY_ICON = `
  * @param {string} opts.repo
  * @param {string} opts.token
  * @param {string} opts.rootPath   Folder to start browsing at (ASSETS_FOLDER)
+ * @param {string[]} [opts.rootPaths] Available image roots
  * @param {(assetPath: string, item: object) => void} opts.onAssetPick
  */
 export async function mountAssetBrowser(mount, {
-  org, repo, token, rootPath, onAssetPick,
+  org, repo, token, rootPath, rootPaths = [rootPath], onAssetPick,
 }) {
+  let currentRoot = rootPaths[0];
   mount.innerHTML = `
     <div class="dp-browser-sticky">
+      <div class="dp-row dp-inline-field-row" ${rootPaths.length > 1 ? '' : 'hidden'}>
+        <label class="dp-inline-field-label" for="dp-browser-root">Image folder</label>
+        <select id="dp-browser-root" class="dp-select">
+          ${rootPaths.map((path) => `<option value="${escapeHtml(path)}">${escapeHtml(path)}</option>`).join('')}
+        </select>
+      </div>
       <input type="text" id="dp-browser-search" class="dp-text-input dp-browser-search" placeholder="Search this folder…" autocomplete="off" />
       <div class="dp-breadcrumb" id="dp-browser-breadcrumb"></div>
     </div>
@@ -91,6 +99,7 @@ export async function mountAssetBrowser(mount, {
 
   let currentItems = [];
   let renderFolder;
+  let loadId = 0;
 
   function renderTiles(items) {
     grid.innerHTML = '';
@@ -151,13 +160,13 @@ export async function mountAssetBrowser(mount, {
   }
 
   function renderBreadcrumb(path) {
-    const rootSegs = rootPath.split('/').filter(Boolean);
+    const rootSegs = currentRoot.split('/').filter(Boolean);
     const pathSegs = path.split('/').filter(Boolean);
     const rootLabel = rootSegs[rootSegs.length - 1] || 'Assets';
     const rel = pathSegs.slice(rootSegs.length);
 
-    const crumbs = [{ label: rootLabel, path: rootPath }];
-    let acc = rootPath;
+    const crumbs = [{ label: rootLabel, path: currentRoot }];
+    let acc = currentRoot === '/' ? '' : currentRoot;
     rel.forEach((seg) => {
       acc = `${acc}/${seg}`;
       crumbs.push({ label: seg, path: acc });
@@ -175,6 +184,8 @@ export async function mountAssetBrowser(mount, {
   }
 
   renderFolder = async function loadFolder(path) {
+    loadId += 1;
+    const requestId = loadId;
     grid.innerHTML = '<p class="dp-status">Loading…</p>';
     let items;
     try {
@@ -183,10 +194,12 @@ export async function mountAssetBrowser(mount, {
       });
       items = listed.map((item) => ({ ...item, path: toBarePath(item.path, org, repo) }));
     } catch (err) {
+      if (requestId !== loadId) return;
       grid.innerHTML = `<p class="dp-error">${(err && err.message) || 'Could not list folder.'}</p>`;
       return;
     }
 
+    if (requestId !== loadId) return;
     currentItems = items;
     renderBreadcrumb(path);
     searchInput.value = '';
@@ -199,5 +212,10 @@ export async function mountAssetBrowser(mount, {
     renderTiles(currentItems.filter((item) => item.name.toLowerCase().includes(q)));
   });
 
-  await renderFolder(rootPath);
+  mount.querySelector('#dp-browser-root').addEventListener('change', (event) => {
+    currentRoot = event.target.value;
+    renderFolder(currentRoot);
+  });
+
+  await renderFolder(currentRoot);
 }

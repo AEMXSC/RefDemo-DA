@@ -7,7 +7,37 @@
  */
 
 import { getSource, putJsonSource } from './daAdmin.js';
-import { PLACEHOLDERS_PATH } from '../config.js';
+import { ASSETS_FOLDER, PLACEHOLDERS_PATH } from '../config.js';
+
+export async function fetchImageSettings({ org, repo, token }) {
+  const sheet = await getSource({
+    org, repo, token, path: PLACEHOLDERS_PATH,
+  });
+  const rows = sheet?.[':type'] === 'multi-sheet'
+    ? (sheet[':names'] || []).flatMap((name) => sheet[name]?.data || [])
+    : sheet?.data || [];
+  const pathsFor = (key) => rows
+    .filter((row) => (row.key || row.Key) === key)
+    .flatMap((row) => String(row.value ?? row.Text ?? '').split(/[,\r\n]+/))
+    .map((path) => path.trim())
+    .filter(Boolean)
+    .map((path) => {
+      if (!path.startsWith('/') || /[?#\\]|\/{2}|(?:^|\/)\.\.?(?:\/|$)/.test(path)) {
+        throw new Error(`Invalid "${key}" folder: ${path}. Use site-relative absolute paths.`);
+      }
+      return path.replace(/\/+$/, '') || '/';
+    });
+  const daImageRoots = [...new Set(pathsFor('da-image-roots'))];
+  const damImportFolders = pathsFor('aem-import-folder');
+  if (damImportFolders.length > 1
+    || damImportFolders.some((path) => path !== '/content/dam' && !path.startsWith('/content/dam/'))) {
+    throw new Error('"aem-import-folder" must be a single path within /content/dam.');
+  }
+  return {
+    daImageRoots: daImageRoots.length ? daImageRoots : [ASSETS_FOLDER],
+    damFolderPath: damImportFolders[0] || '/content/dam/imported-assets/en',
+  };
+}
 
 function emptySheet() {
   return {

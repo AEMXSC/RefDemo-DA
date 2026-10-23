@@ -92,6 +92,7 @@ async function importImagesToDa(scrapedImages, siteUrl, ctx) {
       repo: ctx.repo,
       ref: ctx.ref,
       siteUrl,
+      rootPath: ctx.daImageRoots?.[0] || ASSETS_FOLDER,
     }), async (result) => {
       done += 1;
       if (result.ok && result.path) {
@@ -147,7 +148,7 @@ async function importImagesToAem(scrapedImages, siteUrl, ctx) {
       imsToken: ctx.token,
       authorUrl: ctx.authorUrl,
       orgId: ctx.orgId,
-      targetFolderPath: ctx.damFolderPath,
+      targetFolderPath: ctx.damFolderPath || '/content/dam/imported-assets/en',
       siteUrl,
     }), async (result) => {
       done += 1;
@@ -240,7 +241,8 @@ export default function renderImagesTab(container, ctx) {
   const repositoryId = repositoryIdFromAuthorUrl(ctx.authorUrl);
   errorEl.textContent = '';
 
-  const daMountKey = `${ctx.token}|${ctx.org}|${ctx.repo}`;
+  const daImageRoots = ctx.daImageRoots || [ASSETS_FOLDER];
+  const daMountKey = `${ctx.token}|${ctx.org}|${ctx.repo}|${JSON.stringify(daImageRoots)}`;
   if (daMount.dataset.mountKey !== daMountKey && ctx.token && ctx.org && ctx.repo) {
     daMount.dataset.mountKey = daMountKey;
     daMount.innerHTML = '';
@@ -249,6 +251,7 @@ export default function renderImagesTab(container, ctx) {
       org: ctx.org,
       repo: ctx.repo,
       rootPath: ASSETS_FOLDER,
+      rootPaths: daImageRoots,
       onAssetPick: (assetPath) => copyImage(assetPath, ctx, toast),
     }).catch((err) => {
       if (state.imageAssetSource === 'da') {
@@ -257,9 +260,9 @@ export default function renderImagesTab(container, ctx) {
     });
   }
 
-  const aemMountKey = `${ctx.token}|${ctx.orgId}|${ctx.assetSelectorApiKey}|${repositoryId}|${ctx.damFolderPath}|${state.selectorRefresh || 0}`;
+  const aemMountKey = `${ctx.token}|${ctx.orgId}|${ctx.assetSelectorApiKey}|${repositoryId}|${state.selectorRefresh || 0}`;
   if (source === 'aem') {
-    if (!ctx.token || !repositoryId || !ctx.damFolderPath) {
+    if (!ctx.token || !repositoryId) {
       errorEl.textContent = 'AEM asset source is not configured for this project.';
       return;
     }
@@ -272,7 +275,7 @@ export default function renderImagesTab(container, ctx) {
         imsOrg: ctx.orgId,
         apiKey: ctx.assetSelectorApiKey,
         repositoryId,
-        path: ctx.damFolderPath,
+        path: '/content/dam',
         onAssetPick: (selection) => copyDamPath(selection.path, ctx, toast),
       }).catch((err) => {
         if (state.imageAssetSource === 'aem') {
