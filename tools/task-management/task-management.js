@@ -751,6 +751,12 @@ class RefDemoTaskManagement extends LitElement {
     if (this.onClose) this.onClose();
   }
 
+  showTasksAfterRequest() {
+    this._view = 'confirm';
+    this._tab = 'tasks';
+    this.loadTasks();
+  }
+
   /* ── Tasks tab ── */
 
   selectTab(tab) {
@@ -973,7 +979,7 @@ class RefDemoTaskManagement extends LitElement {
           <p class="task-management-detail">${this._message}</p>
         </div>
         <div class="task-management-actions">
-          <sl-button @click=${this.close}>Close</sl-button>
+          <sl-button @click=${this.showTasksAfterRequest}>Close</sl-button>
         </div>
       </div>`;
   }
