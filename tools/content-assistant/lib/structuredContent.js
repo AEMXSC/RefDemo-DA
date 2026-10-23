@@ -6,7 +6,7 @@ export const STRUCTURED_TEASER_BLOCK = 'structured-teaser';
 export const STRUCTURED_EDITOR_DEFAULT = 'https://da.live/form#';
 
 function cleanPath(path) {
-  return `/${String(path || '').replace(/^\/+/, '').replace(/\.(html|json)$/i, '')}`;
+  return `/${String(path || '').replace(/^\/+/, '').replace(/\/+$/, '').replace(/\.(html|json)$/i, '')}`;
 }
 
 function previewUrl(org, repo, path) {
@@ -51,6 +51,7 @@ function childPath(parentPath, entry, org, repo) {
 }
 
 function isLikelyFolder(entry) {
+  if (entry?.ext) return false;
   const type = String(entry?.type || entry?.kind || entry?.[':type'] || '').toLowerCase();
   if (type.includes('folder') || type.includes('directory')) return true;
   if (entry?.isFolder || entry?.directory) return true;
@@ -109,27 +110,29 @@ function cell(row, keys) {
 export async function fetchStructuredFolders({ org, repo, token }) {
   const sitePrefix = `/${org}/${repo}`;
   const map = new Map();
-  try {
-    const resp = await fetch(`${DA_ADMIN_ORIGIN}/config/${org}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (resp.ok) {
-      const json = await resp.json().catch(() => null);
-      for (const row of configRows(json)) {
-        if (cell(row, ['key', 'Key']) !== 'editor.path') continue;
-        const value = cell(row, ['value', 'Text']);
-        const eq = value.indexOf('=');
-        if (eq === -1) continue;
-        const editorBase = value.slice(eq + 1).trim() || STRUCTURED_EDITOR_DEFAULT;
-        for (const folder of value.slice(0, eq).split(',')) {
-          const abs = cleanPath(folder.trim());
-          if (abs !== sitePrefix && !abs.startsWith(`${sitePrefix}/`)) continue;
-          const rel = abs.slice(sitePrefix.length) || '/';
-          if (!map.has(rel)) map.set(rel, editorBase);
-        }
+  const resp = await fetch(`${DA_ADMIN_ORIGIN}/config/${org}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!resp.ok && resp.status !== 404) {
+    throw new Error(`Structured content configuration -> HTTP ${resp.status}`);
+  }
+  if (resp.ok) {
+    const json = await resp.json();
+    for (const row of configRows(json)) {
+      const value = cell(row, ['value', 'Text']);
+      const eq = value.indexOf('=');
+      if (eq === -1) continue;
+      const editorBase = value.slice(eq + 1).trim() || STRUCTURED_EDITOR_DEFAULT;
+      if (cell(row, ['key', 'Key']) !== 'editor.path'
+        || !/^https:\/\/(?:www\.)?da\.live\/form\/?(?:#.*)?$/i.test(editorBase)) continue;
+      for (const folder of value.slice(0, eq).split(',')) {
+        const abs = cleanPath(folder.trim());
+        if (abs !== sitePrefix && !abs.startsWith(`${sitePrefix}/`)) continue;
+        const rel = abs.slice(sitePrefix.length) || '/';
+        if (!map.has(rel)) map.set(rel, editorBase);
       }
     }
-  } catch (_) { /* fall through to the default below */ }
+  }
 
   if (map.size === 0) map.set(STRUCTURED_CONTENT_FOLDER, STRUCTURED_EDITOR_DEFAULT);
   return [...map.entries()].map(([folder, editorBase]) => ({ folder, editorBase }));
@@ -139,8 +142,9 @@ export async function fetchStructuredContent({ org, repo, path }) {
   const resp = await fetch(previewUrl(org, repo, path));
   if (resp.status === 404) return null;
   if (!resp.ok) throw new Error(`structured content ${path} -> HTTP ${resp.status}`);
-  const json = await resp.json().catch(() => null);
-  if (!json || !json.data) return null;
+  const json = await resp.json();
+  if (!json?.data || typeof json.data !== 'object' || Array.isArray(json.data)
+    || Object.keys(json.data).length === 0) return null;
   return normalizeStructuredContent(json, path, org, repo);
 }
 
@@ -150,24 +154,37 @@ export async function listStructuredContent({ org, repo, token, folders }) {
     : await fetchStructuredFolders({ org, repo, token });
   const out = [];
   const seen = new Set();
+  const documents = new Set();
 
   async function visit(path, folderRoot, editorBase, depth = 0) {
     if (depth > 6 || seen.has(path)) return;
     seen.add(path);
     const entries = await listSource({ org, repo, token, path });
+    const pending = [];
     for (const entry of entries) {
       const nextPath = childPath(path, entry, org, repo);
-      if (!nextPath || nextPath.includes('/.')) continue;
+      if (!nextPath || nextPath.includes('/.')
+        || !nextPath.startsWith(path === '/' ? '/' : `${path}/`)) continue;
       if (isLikelyFolder(entry)) {
         await visit(nextPath, folderRoot, editorBase, depth + 1);
       } else {
-        const item = await fetchStructuredContent({ org, repo, path: nextPath }).catch(() => null);
+        const ext = entry.ext || entry.path?.match(/\.([a-z0-9]+)$/i)?.[1];
+        if (/^(html|json)$/i.test(ext || '') && !documents.has(nextPath)) {
+          documents.add(nextPath);
+          pending.push(nextPath);
+        }
+      }
+    }
+    for (let i = 0; i < pending.length; i += 4) {
+      const items = await Promise.all(pending.slice(i, i + 4)
+        .map((nextPath) => fetchStructuredContent({ org, repo, path: nextPath })));
+      items.forEach((item) => {
         if (item) {
           item.folder = folderRoot;
           item.editorUrl = `${editorBase}/${org}/${repo}${item.path}`;
           out.push(item);
         }
-      }
+      });
     }
   }
 

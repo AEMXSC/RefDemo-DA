@@ -68,3 +68,20 @@ AEM browsing always starts at `/content/dam` with folder navigation enabled,
 independently of the import destination. `aem-import-folder` is a single DAM
 folder used only for imports; it defaults to `/content/dam/imported-assets/en`.
 Authors still need permission to browse assets and write to the import folder.
+
+## Content Assistant structured content
+
+The Fragments tab reads org-level `editor.path` rows but uses only DA form-editor
+mappings within the current `/{org}/{repo}` site, for example:
+
+```text
+editor.path | /aemxsc/refdemo-da/fragments=https://da.live/form#
+editor.path | /aemxsc/refdemo-da/data=https://da.live/form#
+```
+
+Canvas mappings (including a site-wide canvas default) and mappings for other
+sites are ignored. If no matching form mappings exist, `/fragments` is used.
+Only HTML/JSON documents within these roots are checked, with up to four
+document requests at a time and duplicate requests removed for overlapping
+roots. Empty structured-content responses are excluded; request failures other
+than missing documents are shown as errors rather than silently omitted.
