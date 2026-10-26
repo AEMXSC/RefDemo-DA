@@ -301,8 +301,7 @@ async function loadEager(doc) {
  * @param {Element} doc The container element
  */
 async function loadLazy(doc) {
-  const header = doc.querySelector('header');
-  if (header && !header.querySelector(':scope > .header')) loadHeader(header);
+  loadHeader(doc.querySelector('header'));
 
   const main = doc.querySelector('main');
   await loadSections(main);
@@ -311,8 +310,7 @@ async function loadLazy(doc) {
   const element = hash ? doc.getElementById(hash.substring(1)) : false;
   if (hash && element) element.scrollIntoView();
 
-  const footer = doc.querySelector('footer');
-  if (footer && !footer.querySelector(':scope > .footer')) loadFooter(footer);
+  loadFooter(doc.querySelector('footer'));
 
   loadCSS(`${window.hlx.codeBasePath}/styles/lazy-styles.css`);
   loadFonts();
