@@ -91,3 +91,6 @@ export const THEMES_ASSETS_FOLDER = '/assets/themes';
 // reads for "external-service-url" etc. lib/placeholders.js upserts the
 // "theme" key here to point at the brand-theme doc an author picked.
 export const PLACEHOLDERS_PATH = '/config/placeholders.json';
+
+// Tag taxonomy sheet (Tag ID / Title / Path rows) used by the Metadata tab.
+export const TAGS_PATH = '/config/tags.json';

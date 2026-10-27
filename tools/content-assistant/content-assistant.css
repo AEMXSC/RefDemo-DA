@@ -84,7 +84,7 @@ body {
   resize: vertical;
 }
 
-.dp-metadata button {
+.dp-metadata button[type="submit"] {
   align-self: flex-start;
   padding: 8px 16px;
   border: none;
@@ -95,9 +95,59 @@ body {
   cursor: pointer;
 }
 
-.dp-metadata button:disabled {
+.dp-metadata button[type="submit"]:disabled {
   background: #eee;
   color: #666;
+  cursor: default;
+}
+
+.dp-metadata .dp-metadata-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dp-metadata .dp-metadata-tags:empty {
+  display: none;
+}
+
+.dp-metadata .dp-metadata-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 4px 2px 10px;
+  border: 1px solid #b8d4f5;
+  border-radius: 12px;
+  background: #eaf3fd;
+  font-size: 13px;
+}
+
+.dp-metadata .dp-metadata-tag-unknown {
+  border-color: #e0b04a;
+  background: #fff7e6;
+}
+
+.dp-metadata .dp-metadata-tag-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dp-metadata .dp-metadata-tag button {
+  padding: 0 6px;
+  border: none;
+  background: none;
+  color: #444;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dp-metadata .dp-metadata-tag button:disabled {
+  color: #999;
   cursor: default;
 }
 

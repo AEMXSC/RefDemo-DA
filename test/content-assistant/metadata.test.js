@@ -2,6 +2,7 @@ import {
   metadataSourcePath, metadataTableHtml, normalizeTags, readMetadata, updateMetadata, saveMetadata,
 } from '../../tools/content-assistant/lib/metadata.js';
 import renderMetadataTab from '../../tools/content-assistant/tabs/metadataTab.js';
+import { findTag, parseTags, starterTagsSheet } from '../../tools/content-assistant/lib/tags.js';
 
 const results = [];
 const assert = (condition, message) => {
@@ -28,6 +29,11 @@ const waitReady = async () => {
   const deadline = Date.now() + 3000;
   while (fixture.querySelector('[role=status]').textContent === 'Loading metadata...') {
     if (Date.now() > deadline) throw new Error('Metadata loading did not finish.');
+    // eslint-disable-next-line no-await-in-loop
+    await tick();
+  }
+  while (fixture.querySelector('#dp-metadata-tags-help').textContent === 'Loading tags...') {
+    if (Date.now() > deadline) throw new Error('Tag loading did not finish.');
     // eslint-disable-next-line no-await-in-loop
     await tick();
   }
@@ -86,6 +92,16 @@ let flushResult;
 let replacementResult;
 let listeners;
 let unsubscribed;
+let tagsSheet;
+let tagWrites;
+const taxonomy = () => ({
+  ':type': 'sheet',
+  data: [
+    { 'Tag ID': 'topics', Title: 'Topics', Path: 'topics' },
+    { 'Tag ID': 'usa', Title: 'USA', Path: 'topics/usa' },
+    { 'Tag ID': 'election', Title: 'Election', Path: 'topics/election' },
+  ],
+});
 const stripped = () => {
   const doc = parse(live.html);
   doc.querySelectorAll('.metadata').forEach((node) => node.remove());
@@ -152,8 +168,19 @@ function reset(html = empty) {
   replacementResult = { ok: true };
   listeners = new Set();
   unsubscribed = 0;
+  tagsSheet = taxonomy();
+  tagWrites = [];
 }
 window.fetch = async (url, options = {}) => {
+  if (String(url).endsWith('/test-org/test-site/config/tags.json')) {
+    if (options.method === 'POST') {
+      tagsSheet = JSON.parse(await options.body.get('data').text());
+      tagWrites.push(tagsSheet);
+      return new Response('{}', { status: 200 });
+    }
+    return tagsSheet ? new Response(JSON.stringify(tagsSheet), { status: 200 })
+      : new Response('', { status: 404 });
+  }
   assert(!options.method || options.method === 'GET', 'Unexpected Source API write');
   return new Response(saved || live.html, { status: 200 });
 };
@@ -162,6 +189,12 @@ const input = (field, value) => {
   element.value = value;
   element.dispatchEvent(new Event('input', { bubbles: true }));
 };
+const pickTag = (label) => {
+  const search = fixture.querySelector('#dp-metadata-tag-search');
+  search.value = label;
+  search.dispatchEvent(new Event('input', { bubbles: true }));
+};
+const chips = () => [...fixture.querySelectorAll('.dp-metadata-tag span')].map((chip) => chip.textContent);
 const submit = async () => {
   fixture.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   const deadline = Date.now() + 3000;
@@ -258,8 +291,9 @@ try {
     reset();
     renderMetadataTab(fixture, ctx);
     await waitReady();
-    assert(fixture.querySelectorAll('input,textarea').length === 3, 'missing properties');
+    assert(fixture.querySelectorAll('input[name],textarea[name]').length === 3, 'missing properties');
     assert([...fixture.querySelectorAll('input,textarea')].every((field) => !field.value), 'unexpected field values');
+    assert(!chips().length, 'unexpected tags');
   });
   await test('Sidebar saves and prefills on reopen despite metadata-free live snapshots', async () => {
     reset();
@@ -267,7 +301,8 @@ try {
     await waitReady();
     input('Title', 'Voting Tonight');
     input('Description', '10 states will be voting');
-    input('Tags', 'usa,election,2026');
+    pickTag('USA (topics/usa)');
+    pickTag('Election (topics/election)');
     await submit();
     assert(fixture.querySelector('[role=status]').textContent === 'Metadata updated in the page and saved.', 'false success');
     assert(readMetadata(saved).Title === 'Voting Tonight', 'lost title');
@@ -276,7 +311,8 @@ try {
     renderMetadataTab(fixture, ctx);
     await waitReady();
     assert(fixture.querySelector('[name=Title]').value === 'Voting Tonight', 'reopened metadata missing');
-    assert(fixture.querySelector('[name=Tags]').value === 'usa, election, 2026', 'tags missing');
+    assert(fixture.querySelector('[name=Tags]').value === 'topics/usa, topics/election', 'tags missing');
+    assert(chips().join() === 'USA,Election', 'tag chips missing');
   });
   await test('Metadata-free live updates never clear source values or dirty drafts', async () => {
     reset(existing);
@@ -296,7 +332,82 @@ try {
     await submit();
     assert(fixture.querySelector('[role=status]').classList.contains('dp-error'), 'error hidden');
     assert(fixture.querySelector('[name=Title]').value === 'Keep me', 'draft lost');
-    assert(!fixture.querySelector('button').disabled, 'retry unavailable');
+    assert(!fixture.querySelector('button[type=submit]').disabled, 'retry unavailable');
+  });
+  await test('Tag rows rebuild the hierarchy with case-insensitive columns', () => {
+    const tags = parseTags({
+      ':type': 'multi-sheet',
+      ':names': ['tags'],
+      tags: {
+        data: [
+          { 'tag-id': 'gaming', title: 'Gaming Laptops', path: '/products/laptops/gaming/' },
+          { TAGID: 'laptops', TITLE: 'Laptops', PATH: 'products/laptops' },
+          { 'Tag ID': 'products', Title: 'Products', Path: 'products' },
+          { 'Tag ID': 'dupe', Title: 'Duplicate', Path: 'products' },
+          { Title: 'No path' },
+        ],
+      },
+    });
+    assert(tags.length === 3, 'wrong tag count');
+    const gaming = tags.find((tag) => tag.id === 'gaming');
+    assert(gaming.path === 'products/laptops/gaming' && gaming.parent === 'products/laptops', 'wrong tree');
+    assert(gaming.breadcrumb === 'Products › Laptops › Gaming Laptops' && gaming.depth === 2, 'wrong breadcrumb');
+    assert(findTag(tags, 'GAMING') === gaming && findTag(tags, 'gaming laptops') === gaming, 'lookup failed');
+    assert(!findTag(tags, 'missing'), 'unexpected match');
+  });
+  await test('Missing tags sheet is created once with Tag ID / Title / Path rows', async () => {
+    reset();
+    tagsSheet = null;
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    assert(tagWrites.length === 1, 'sheet not created');
+    assert(JSON.stringify(tagWrites[0].columns) === JSON.stringify(['Tag ID', 'Title', 'Path']), 'wrong columns');
+    assert(JSON.stringify(tagWrites[0]) === JSON.stringify(starterTagsSheet()), 'wrong sheet');
+    assert(fixture.querySelector('#dp-metadata-tags-help').textContent.startsWith('Created /config/tags'), 'creation hidden');
+    fixture.metadataCleanup();
+    delete fixture.dataset.dpBuilt;
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    assert(tagWrites.length === 1, 'existing sheet overwritten');
+  });
+  await test('Existing tags sheet is used and never rewritten', async () => {
+    reset();
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    const options = [...fixture.querySelectorAll('datalist option')].map((option) => option.value);
+    assert(options.join() === 'Topics (topics),Election (topics/election),USA (topics/usa)', 'wrong options');
+    assert(tagWrites.length === 0, 'sheet rewritten');
+  });
+  await test('Picker hides selected tags and ignores unknown typed tags', async () => {
+    reset();
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    pickTag('USA (topics/usa)');
+    pickTag('USA (topics/usa)');
+    assert(chips().join() === 'USA', 'duplicate tag');
+    assert(![...fixture.querySelectorAll('datalist option')].some((option) => option.value === 'USA (topics/usa)'), 'selected tag offered');
+    const search = fixture.querySelector('#dp-metadata-tag-search');
+    search.value = 'not a tag';
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+    assert(chips().join() === 'USA', 'unknown tag added');
+    assert(fixture.querySelector('[role=status]').classList.contains('dp-error'), 'unknown tag not reported');
+    search.value = 'election';
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+    assert(chips().join() === 'USA,Election', 'exact title not accepted');
+  });
+  await test('Existing page tags outside the taxonomy are kept and removable', async () => {
+    reset(existing);
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    assert(chips().join() === 'sample,hello', 'existing tags missing');
+    assert(fixture.querySelectorAll('.dp-metadata-tag-unknown').length === 2, 'unknown tags not flagged');
+    assert(fixture.querySelector('button[type=submit]').disabled, 'clean form is dirty');
+    fixture.querySelector('.dp-metadata-tag button').click();
+    pickTag('USA (topics/usa)');
+    selection = metadataTableHtml(existing, {});
+    await submit();
+    assert(readMetadata(saved).Tags === 'hello, topics/usa', 'wrong saved tags');
+    assert(readMetadata(saved).Title === 'Existing title', 'untouched field changed');
   });
   await test('Leaving tab releases the live document subscription', () => {
     reset();
