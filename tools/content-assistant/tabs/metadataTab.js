@@ -8,8 +8,8 @@ export default function renderMetadataTab(container, ctx) {
   container.dataset.dpBuilt = '1';
   container.innerHTML = `
     <form class="dp-metadata">
-      <strong>Metadata</strong>
-      <p class="dp-subtle">To add metadata, place the cursor on an empty line at the page bottom.
+      <strong>Page Metadata</strong>
+      <p class="dp-subtle">To add metadata, place the cursor on an empty line on the page.
         To update metadata, select the entire Metadata table using its table selection handle.</p>
       <label for="dp-metadata-title">Title</label>
       <input id="dp-metadata-title" name="Title" type="text">

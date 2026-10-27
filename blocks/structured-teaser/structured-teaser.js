@@ -82,6 +82,9 @@ async function fetchFragment(path, site) {
 }
 
 export default async function decorate(block) {
+  // "structured-teaser (hero)" must not use the bare .hero class: the stock
+  // hero block's CSS targets .hero and would restyle this block.
+  if (block.classList.contains('hero')) block.classList.replace('hero', 'teaser-hero');
   const path = fragmentPath(block);
   const site = currentSite();
   const json = await fetchFragment(path, site);

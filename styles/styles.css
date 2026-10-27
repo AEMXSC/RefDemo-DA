@@ -664,11 +664,15 @@ main {
   transform-style: preserve-3d;
 }
 
+/* Parallax only the hero itself, so other blocks in the same section scroll normally. */
 main .hero-container {
+  transform-style: preserve-3d;
+  padding: 0;
+}
+
+main .hero-container > .hero-wrapper {
   -webkit-transform: translateZ(-1px) scale(2);
   transform: translateZ(-1px) scale(2);
-  padding: 0;
-
 }
 main .cards-container {
   -webkit-transform: translateZ(0);
@@ -687,6 +691,11 @@ main .cards-container {
 }
 .adobe-ue-edit main .hero-container, .adobe-ue-preview main .hero-container {
   margin: initial !important;
+  transform: initial;
+}
+
+.adobe-ue-edit main .hero-container > .hero-wrapper,
+.adobe-ue-preview main .hero-container > .hero-wrapper {
   transform: initial;
 }
 .adobe-ue-edit main .cards-container, .adobe-ue-preview main .cards-container {

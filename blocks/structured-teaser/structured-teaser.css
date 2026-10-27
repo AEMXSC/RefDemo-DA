@@ -50,39 +50,42 @@
 
 /* Variant: hero — image as a full-bleed background with the text/CTA overlaid
    (authored as "structured-teaser (hero)"). */
-.structured-teaser.hero {
+.structured-teaser.teaser-hero {
+  position: relative;
   grid-template-columns: 1fr;
   grid-template-areas: "stack";
   align-items: stretch;
   min-height: 420px;
 }
 
-.structured-teaser.hero .structured-teaser-media,
-.structured-teaser.hero .structured-teaser-body {
+.structured-teaser.teaser-hero .structured-teaser-media,
+.structured-teaser.teaser-hero .structured-teaser-body {
   grid-area: stack;
 }
 
-.structured-teaser.hero .structured-teaser-media {
-  position: relative;
-  height: 100%;
+/* The image covers the block instead of setting its height, so a full-width
+   hero stays banner-sized rather than following the image's aspect ratio. */
+.structured-teaser.teaser-hero .structured-teaser-media {
+  position: absolute;
+  inset: 0;
 }
 
-.structured-teaser.hero .structured-teaser-media picture,
-.structured-teaser.hero .structured-teaser-media img {
+.structured-teaser.teaser-hero .structured-teaser-media picture,
+.structured-teaser.teaser-hero .structured-teaser-media img {
   width: 100%;
   height: 100%;
   aspect-ratio: auto;
   object-fit: cover;
 }
 
-.structured-teaser.hero .structured-teaser-media::after {
+.structured-teaser.teaser-hero .structured-teaser-media::after {
   content: "";
   position: absolute;
   inset: 0;
   background: rgb(0 0 0 / 40%);
 }
 
-.structured-teaser.hero .structured-teaser-body {
+.structured-teaser.teaser-hero .structured-teaser-body {
   position: relative;
   z-index: 1;
   place-self: center;
@@ -93,13 +96,13 @@
   text-shadow: 0 1px 4px rgb(0 0 0 / 50%);
 }
 
-.structured-teaser.hero .structured-teaser-body .button-container {
+.structured-teaser.teaser-hero .structured-teaser-body .button-container {
   margin-top: 20px;
 }
 
 /* The site's base button is an unpadded text link with a chevron; on the hero
    make the CTA read as a solid button sitting on top of the image. */
-.structured-teaser.hero .structured-teaser-body .button.primary {
+.structured-teaser.teaser-hero .structured-teaser-body .button.primary {
   padding: 12px 28px;
   border-radius: 6px;
   background-color: #fff;
@@ -109,7 +112,7 @@
   overflow: visible;
 }
 
-.structured-teaser.hero .structured-teaser-body .button.primary::after {
+.structured-teaser.teaser-hero .structured-teaser-body .button.primary::after {
   display: none;
 }
 
@@ -120,6 +123,18 @@
 .structured-teaser-body p {
   font-size: var(--body-font-size-m);
   line-height: 1.5;
+}
+
+/* Full width by default, like sec-full-width: true; authors can opt out with
+   Section Metadata "sec-full-width | false". */
+main > .section:not([data-sec-full-width="false"]) > .structured-teaser-wrapper {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+main > .section:not([data-sec-full-width="false"]) > .structured-teaser-wrapper .structured-teaser {
+  border-radius: 0;
 }
 
 @media (width <= 700px) {
@@ -142,7 +157,7 @@
     order: 0;
   }
 
-  .structured-teaser.hero {
+  .structured-teaser.teaser-hero {
     min-height: 320px;
   }
 }
