@@ -63,7 +63,7 @@ export default function renderMetadataTab(container, ctx) {
     tagSearch.disabled = saving || !editable || !tags.length;
   };
   const renderTags = () => {
-    tagsField.value = selectedTags.join(', ');
+    tagsField.value = selectedTags.map((value) => findTag(tags, value)?.title || value).join(', ');
     tagList.replaceChildren(...selectedTags.map((value) => {
       const tag = findTag(tags, value);
       const item = document.createElement('li');
@@ -101,7 +101,7 @@ export default function renderMetadataTab(container, ctx) {
       || (query.trim() && findTag(tags, query));
     if (!tag) return false;
     if (!selectedTags.some((value) => findTag(tags, value) === tag)) {
-      selectedTags = [...selectedTags, tag.path];
+      selectedTags = [...selectedTags, tag.title];
       markDirty('Tags');
     }
     tagSearch.value = '';

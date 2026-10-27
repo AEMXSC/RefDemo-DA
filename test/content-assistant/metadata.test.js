@@ -311,7 +311,7 @@ try {
     renderMetadataTab(fixture, ctx);
     await waitReady();
     assert(fixture.querySelector('[name=Title]').value === 'Voting Tonight', 'reopened metadata missing');
-    assert(fixture.querySelector('[name=Tags]').value === 'topics/usa, topics/election', 'tags missing');
+    assert(fixture.querySelector('[name=Tags]').value === 'USA, Election', 'tags missing');
     assert(chips().join() === 'USA,Election', 'tag chips missing');
   });
   await test('Metadata-free live updates never clear source values or dirty drafts', async () => {
@@ -406,8 +406,18 @@ try {
     pickTag('USA (topics/usa)');
     selection = metadataTableHtml(existing, {});
     await submit();
-    assert(readMetadata(saved).Tags === 'hello, topics/usa', 'wrong saved tags');
+    assert(readMetadata(saved).Tags === 'hello, USA', 'wrong saved tags');
     assert(readMetadata(saved).Title === 'Existing title', 'untouched field changed');
+  });
+  await test('Legacy path-valued page tags are saved as titles', async () => {
+    reset(updateMetadata(existing, { Tags: 'topics/usa, sample' }));
+    selection = metadataTableHtml(live.html, {});
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    assert(chips().join() === 'USA,sample', 'path tag not resolved');
+    pickTag('Election (topics/election)');
+    await submit();
+    assert(readMetadata(saved).Tags === 'USA, sample, Election', `wrong saved tags: ${readMetadata(saved).Tags}`);
   });
   await test('Leaving tab releases the live document subscription', () => {
     reset();
