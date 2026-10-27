@@ -62,11 +62,13 @@ export default function renderMetadataTab(container, ctx) {
     setStatus('Saving metadata...');
     updateButton();
     try {
-      await saveMetadata(ctx, changes);
+      const { versionChecked } = await saveMetadata(ctx, changes);
       dirty.clear();
       if (!disposed) {
         populate((await loadMetadataSource(ctx)).html);
-        setStatus('Metadata saved.');
+        setStatus(versionChecked
+          ? 'Metadata saved.'
+          : 'Metadata saved. DA did not provide a version header; avoid simultaneous edits while saving.');
       }
     } catch (error) {
       if (!disposed) setStatus(error.message || 'Could not save metadata.', true);

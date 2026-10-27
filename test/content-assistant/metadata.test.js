@@ -81,6 +81,8 @@ let postCount;
 let postStatus;
 let getStatus;
 let etag;
+let headEtag;
+let changeOnHead;
 let listener;
 let unsubscribed;
 let flushResult;
@@ -113,6 +115,8 @@ function reset(html = empty) {
   postStatus = 201;
   getStatus = 200;
   etag = '"v1"';
+  headEtag = '';
+  changeOnHead = false;
   flushResult = { ok: true };
   onFlush = undefined;
   unsubscribed = false;
@@ -121,6 +125,10 @@ function reset(html = empty) {
 window.fetch = async (url, options = {}) => {
   assert(url === 'https://admin.da.live/source/test-org/test-site/nested/page.html', 'wrong site or path');
   requests.push({ url, options });
+  if (options.method === 'HEAD') {
+    if (changeOnHead) stored = stored.replace('Page content', 'Concurrent edit');
+    return new Response(null, { status: 200, headers: headEtag ? { ETag: headEtag } : {} });
+  }
   if (options.method === 'POST') {
     postCount += 1;
     if (postStatus !== 201) return new Response('Error', { status: postStatus });
@@ -173,11 +181,29 @@ try {
     await rejects(() => saveMetadata(ctx, { Title: 'Bad' }), 'page changed');
     assert(stored === empty, 'conflicting source replaced');
   });
-  await test('No ETag means no unconditional write', async () => {
+  await test('Missing GET ETag uses HEAD ETag for a conditional write', async () => {
     reset();
     etag = '';
-    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }), 'page version');
-    assert(postCount === 0, 'unguarded write');
+    headEtag = '"head-v1"';
+    const result = await saveMetadata(ctx, { Title: 'Saved' });
+    assert(result.versionChecked, 'HEAD version not used');
+    const post = requests.find(({ options }) => options.method === 'POST');
+    assert(post.options.headers['If-Match'] === headEtag, 'HEAD ETag not sent');
+  });
+  await test('Missing ETag supports saving after rechecking source', async () => {
+    reset();
+    etag = '';
+    const result = await saveMetadata(ctx, { Title: 'Saved' });
+    assert(!result.versionChecked, 'incorrect atomic protection claim');
+    assert(postCount === 1 && readMetadata(stored).Title === 'Saved', 'save blocked');
+    assert(requests.filter(({ options }) => !options.method).length === 2, 'source not rechecked');
+  });
+  await test('Missing ETag still detects source changes before writing', async () => {
+    reset();
+    etag = '';
+    changeOnHead = true;
+    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }), 'page changed');
+    assert(postCount === 0 && stored.includes('Concurrent edit'), 'concurrent content overwritten');
   });
   await test('Missing source is an error, never a new page', async () => {
     reset();

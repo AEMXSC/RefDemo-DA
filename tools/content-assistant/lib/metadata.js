@@ -87,10 +87,28 @@ export async function saveMetadata(ctx, changes) {
     throw new Error(`Could not save pending page edits: ${saved?.error || 'unknown error'}. Metadata was not changed.`);
   }
   const source = await loadMetadataSource(ctx);
-  // Refuse an unconditional full-document write if the server cannot guard it.
-  if (!source.etag) throw new Error('DA did not return a page version. Metadata was not changed.');
+  if (!source.etag) {
+    const head = await fetch(`${DA_ADMIN_ORIGIN}/source/${ctx.org}/${ctx.repo}${source.path}`, {
+      method: 'HEAD',
+      headers: { Authorization: `Bearer ${ctx.token}` },
+      cache: 'no-store',
+    });
+    if (!head.ok) throw new Error(`Could not check the page version (HTTP ${head.status}).`);
+    source.etag = head.headers.get('etag');
+  }
+  if (!source.etag) {
+    const latest = await loadMetadataSource(ctx);
+    if (latest.html !== source.html) {
+      throw new Error('The page changed while saving. Please try again.');
+    }
+    // Older DA deployments do not expose ETag. This check is best-effort,
+    // not an atomic replacement for If-Match.
+    // eslint-disable-next-line no-console
+    console.warn('[content-assistant] DA did not expose ETag; metadata save uses a source-content recheck.');
+  }
   const html = updateMetadata(source.html, changes);
   await putHtmlSource({
     org: ctx.org, repo: ctx.repo, token: ctx.token, path: source.path, etag: source.etag, html,
   });
+  return { versionChecked: Boolean(source.etag) };
 }
