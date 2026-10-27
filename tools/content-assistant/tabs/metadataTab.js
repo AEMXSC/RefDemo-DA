@@ -29,7 +29,6 @@ export default function renderMetadataTab(container, ctx) {
   let saving = false;
   let editable = true;
   let disposed = false;
-  let liveReceived = false;
   let unsubscribe;
   let snapshot;
 
@@ -85,22 +84,19 @@ export default function renderMetadataTab(container, ctx) {
   if (typeof ctx.actions.subscribeLiveDocument === 'function') {
     unsubscribe = ctx.actions.subscribeLiveDocument((live) => {
       if (disposed) return;
-      liveReceived = true;
       snapshot = live;
       editable = live.editable !== false;
-      populate(live.html);
       form.querySelectorAll('input, textarea').forEach((input) => {
         input.disabled = saving || !editable;
       });
       if (!editable) setStatus('This page is read-only.');
-      else if (!dirty.size && !saving) setStatus('');
     });
   }
   loadMetadataSource(ctx).then(({ html }) => {
-    if (disposed || liveReceived) return;
+    if (disposed) return;
     populate(html);
     setStatus('');
   }).catch((error) => {
-    if (!disposed && !liveReceived) setStatus(error.message, true);
+    if (!disposed) setStatus(error.message, true);
   });
 }

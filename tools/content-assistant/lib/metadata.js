@@ -10,8 +10,28 @@ function metadataRows(doc) {
   return [...doc.querySelectorAll('main .metadata > div')];
 }
 
-export function readMetadata(html) {
+function parseMetadataDocument(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('table').forEach((table) => {
+    if (table.rows[0]?.cells[0]?.textContent.trim().toLowerCase() !== 'metadata') return;
+    const block = doc.createElement('div');
+    block.className = 'metadata';
+    [...table.rows].slice(1).forEach((row) => {
+      const entry = doc.createElement('div');
+      [...row.cells].forEach((cell) => {
+        const value = doc.createElement('div');
+        value.innerHTML = cell.innerHTML;
+        entry.append(value);
+      });
+      block.append(entry);
+    });
+    table.replaceWith(block);
+  });
+  return doc;
+}
+
+export function readMetadata(html) {
+  const doc = parseMetadataDocument(html);
   const values = { Title: '', Description: '', Tags: '' };
   metadataRows(doc).forEach((row) => {
     const key = row.children[0]?.textContent.trim().toLowerCase();
@@ -23,7 +43,7 @@ export function readMetadata(html) {
 }
 
 export function updateMetadata(html, changes) {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const doc = parseMetadataDocument(html);
   const main = doc.querySelector('main');
   if (!main) throw new Error('The page does not contain a main content area.');
   let metadata = main.querySelector('.metadata');
@@ -102,8 +122,18 @@ export async function saveMetadata(ctx, changes, snapshot) {
     || !actions.saveDocument) {
     throw new Error('This DA editor does not support live metadata editing. Open the page in DA Canvas.');
   }
-  const existing = new DOMParser().parseFromString(snapshot.html, 'text/html')
-    .querySelector('main .metadata');
+  const pending = await actions.saveDocument();
+  if (!pending?.ok) {
+    throw new Error(`Could not save pending page edits: ${pending?.error || 'unknown error'}. Metadata was not changed.`);
+  }
+  // DA's live-preview serializer removes metadata. Only saved source can tell
+  // whether a table already exists; never insert based on the live snapshot.
+  const source = await loadMetadataSource(ctx);
+  const metadataTables = parseMetadataDocument(source.html).querySelectorAll('main .metadata');
+  if (metadataTables.length > 1) {
+    throw new Error('This page already contains multiple Metadata tables. Keep one table before saving metadata.');
+  }
+  const existing = metadataTables[0];
   let selection = '';
   try {
     selection = await actions.getSelection();
@@ -125,44 +155,23 @@ export async function saveMetadata(ctx, changes, snapshot) {
     throw new Error('Place the cursor on an empty line at the bottom of the page, without selecting content, then click Save metadata.');
   }
 
-  const updated = updateMetadata(snapshot.html, changes);
+  const updated = updateMetadata(source.html, changes);
   const expected = readMetadata(updated);
-  const table = metadataTableHtml(snapshot.html, changes);
-  // Insertion has no SDK acknowledgement. Require a live-document echo before
-  // reporting success, rather than treating postMessage delivery as a save.
-  const confirmedHtml = await new Promise((resolve, reject) => {
-    let unsubscribe;
-    let timer;
-    const finish = (error, html) => {
-      clearTimeout(timer);
-      unsubscribe?.();
-      if (error) reject(error);
-      else resolve(html);
-    };
-    timer = setTimeout(() => finish(new Error('DA did not confirm the metadata update. Check the page before retrying.')), 8000);
-    unsubscribe = actions.subscribeLiveDocument((live) => {
-      if (live.html === snapshot.html) return;
-      const actual = readMetadata(live.html);
-      const hasTable = new DOMParser().parseFromString(live.html, 'text/html').querySelector('main .metadata');
-      if (hasTable && METADATA_FIELDS.every((field) => actual[field] === expected[field])) {
-        finish(null, live.html);
-      }
-    });
-    Promise.resolve().then(() => actions.sendHTML(table, existing ? { replace: true } : {}))
-      .then((result) => {
-        if (existing && !result?.ok) finish(new Error(result?.message || result?.error || 'DA rejected the metadata update.'));
-        else if (existing && result?.html) {
-          const actual = readMetadata(result.html);
-          if (METADATA_FIELDS.every((field) => actual[field] === expected[field])) {
-            finish(null, result.html);
-          }
-        }
-      })
-      .catch(finish);
-  });
+  const table = metadataTableHtml(source.html, changes);
+  const result = await actions.sendHTML(table, existing ? { replace: true } : {});
+  if (existing && !result?.ok) {
+    throw new Error(result?.message || result?.error || 'DA rejected the metadata update.');
+  }
   const saved = await actions.saveDocument();
   if (!saved?.ok) {
     throw new Error(`Metadata is in the editor, but saving failed: ${saved?.error || 'unknown error'}. Keep the page open and retry saving.`);
   }
-  return confirmedHtml;
+  const confirmed = await loadMetadataSource(ctx);
+  const doc = parseMetadataDocument(confirmed.html);
+  const tables = doc.querySelectorAll('main .metadata');
+  const actual = readMetadata(confirmed.html);
+  if (tables.length !== 1 || !METADATA_FIELDS.every((field) => actual[field] === expected[field])) {
+    throw new Error('DA did not persist the expected metadata. Check the Metadata table before retrying.');
+  }
+  return confirmed.html;
 }
