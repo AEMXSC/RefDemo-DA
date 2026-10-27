@@ -1,7 +1,7 @@
 /*
  * Content Assistant — DA library plugin shell. Boots via the DA App SDK,
  * resolves IMS user email + analytics context, then renders the Images /
- * Fragments / Theme tabs.
+ * Fragments / Theme / Metadata tabs.
  */
 
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
@@ -14,11 +14,13 @@ import { AEM_ORG_ID, AEM_ASSET_SELECTOR_API_KEY } from './config.js';
 import renderImagesTab from './tabs/imagesTab.js';
 import renderTextsTab from './tabs/textsTab.js';
 import { renderThemeTab } from './tabs/themeTab.js';
+import renderMetadataTab from './tabs/metadataTab.js';
 
 const TABS = [
   { id: 'images', label: 'Images', render: renderImagesTab },
   { id: 'texts', label: 'Fragments', render: renderTextsTab },
   { id: 'theme', label: 'Theme', render: renderThemeTab },
+  { id: 'metadata', label: 'Metadata', render: renderMetadataTab },
 ];
 
 const root = document.getElementById('content-assistant-root');
@@ -85,6 +87,8 @@ function render(ctx) {
   });
 
   if (panelEl.dataset.lastTab !== state.activeTab) {
+    panelEl.metadataCleanup?.();
+    delete panelEl.metadataCleanup;
     panelEl.dataset.lastTab = state.activeTab;
     delete panelEl.dataset.dpBuilt;
     panelEl.innerHTML = '';

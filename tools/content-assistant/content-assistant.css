@@ -60,6 +60,47 @@ body {
   margin-bottom: 10px;
 }
 
+.dp-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dp-metadata label {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.dp-metadata input,
+.dp-metadata textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.dp-metadata textarea {
+  resize: vertical;
+}
+
+.dp-metadata button {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 16px;
+  background: #1473e6;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dp-metadata button:disabled {
+  background: #eee;
+  color: #666;
+  cursor: default;
+}
+
 .dp-inline-field-row {
   justify-content: flex-start;
 }
