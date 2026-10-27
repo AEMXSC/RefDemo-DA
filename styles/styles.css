@@ -323,9 +323,9 @@ body.green-theme {
 }
 
 header {
-  height: var(--nav-height);
+  height: auto;
   min-height: 90px;
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
@@ -405,6 +405,14 @@ pre {
 
 main > div {
   margin: 40px 16px;
+}
+
+main > div:first-child {
+  margin-top: 0;
+}
+
+main > div:first-child > .default-content-wrapper > :first-child {
+  margin-top: 0;
 }
 
 input,
