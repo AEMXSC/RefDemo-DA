@@ -423,6 +423,26 @@ function buildAemPageUrl(org, repo, path) {
   return `https://main--${repo}--${org}.aem.page${normalizedPath}`;
 }
 
+// Page title from the metadata block "Title" row, else the first h1,
+// else the page name (last path segment).
+async function fetchPageTitle(org, repo, path, token) {
+  const pageName = path.split('/').filter(Boolean).pop() || 'index';
+  try {
+    const resp = await fetch(`https://admin.da.live/source/${org}/${repo}${path.replace(/\/$/, '/index')}.html`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return pageName;
+    const doc = new DOMParser().parseFromString(await resp.text(), 'text/html');
+    const titleRow = [...doc.querySelectorAll('.metadata > div')]
+      .find((row) => row.children[0]?.textContent.trim().toLowerCase() === 'title');
+    const title = titleRow?.children[1]?.textContent.trim()
+      || doc.querySelector('h1')?.textContent.trim();
+    return title || pageName;
+  } catch (e) {
+    return pageName;
+  }
+}
+
 const REVIEW_PROGRESS_SEQUENCE = [
   'Fetching page details…',
   'Collecting user details…',
@@ -446,13 +466,14 @@ async function invokeExternalService(token, context, onProgress = () => {}) {
   console.log('[task-management] Resolved →', { org, repo, path });
 
   onProgress('Collecting user details…');
-  const [profile, config] = await Promise.all([
+  const [profile, config, pageTitle] = await Promise.all([
     fetchUserProfile(token),
     fetchPlaceholders(org, repo).catch((err) => {
       // eslint-disable-next-line no-console
       console.warn('[task-management] Placeholders fetch failed:', err);
       return { externalServiceUrl: '', externalServicePayload: '' };
     }),
+    fetchPageTitle(org, repo, path, token),
   ]);
 
   const resolvedUrl = config.externalServiceUrl;
@@ -483,6 +504,7 @@ async function invokeExternalService(token, context, onProgress = () => {}) {
   }
 
   resolvedPayload.aemPageUrl = buildAemPageUrl(org, repo, path);
+  resolvedPayload['page-title'] = pageTitle;
 
   onProgress('Creating project in Workfront…');
   // eslint-disable-next-line no-console
