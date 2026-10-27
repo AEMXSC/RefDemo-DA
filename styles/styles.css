@@ -21,7 +21,6 @@
 }
 */
 
-@import url('./industry-specific/wknd-da.css');
 :root {
   /* colors */
   --background-color: var(--brand-background-color, #ffffff);
@@ -495,7 +494,9 @@ button:disabled:hover {
 button:disabled::after,
 button:disabled:hover::after {
   color: var(--text-disabled);
-  cursor: unset;}
+  cursor: unset;
+}
+
 a.button.primary,
 button.button.primary {
   border-color: var(--text-color);
@@ -927,99 +928,5 @@ table {
   box-sizing: border-box;
 }
 
+
 /* Responsive styles- end */
-
-/* temporary demo  Brand Theme: Navy Blue
-================================  */
-
-
-/* Dynamic brand colors only */
-
-
-
-:root {
-  --brand-theme-gradient: linear-gradient(
-    135deg,
-    var(--brand-theme-color),
-    color-mix(
-      in srgb,
-      var(--brand-theme-color) 75%,
-      var(--brand-dark-color)
-    ),
-    var(--brand-dark-color)
-  );
-
-  --brand-soft-background: color-mix(
-    in srgb,
-    var(--brand-light-color) 94%,
-    var(--brand-theme-color)
-  );
-
-  --brand-card-shadow: 0 6px 18px
-    color-mix(in srgb, var(--brand-dark-color) 12%, transparent);
-
-  --brand-card-hover-shadow: 0 14px 28px
-    color-mix(in srgb, var(--brand-dark-color) 22%, transparent);
-}
-
-/* Hero */
-main .hero-container {
-  background: var(--brand-soft-gradient);
-  color: var(--brand-theme-color);
-}
-
-/* Highlighted sections */
-main .section {
-  background: var(--brand-soft-gradient);
-  color: var(--brand-text-color);
-}
-
-/* Cards */
-.cards.block > ul > li {
-  border-color: color-mix(
-    in srgb,
-    var(--brand-dark-color) 15%,
-    var(--brand-light-color)
-  );
-  background: var(--brand-soft-gradient);
-  box-shadow: var(--brand-card-shadow);
-}
-
-.cards.block > ul > li:hover {
-  box-shadow: var(--brand-card-hover-shadow);
-}
-
-/* Card text */
-.cards.block .cards-card-body {
-  background: var(--brand-light-color);
-  color: var(--brand-text-color);
-}
-
-/* Card headings */
-.cards.block .cards-card-body h3 ,
-.cards-card-body h2{
-  color: var(--brand-theme-color);
-}
-
-.cards.block > ul > li:hover .cards-card-body h3 {
-  color: var(--brand-link-hover-color);
-}
-
-/* Primary buttons */
-a.button.primary,
-button.button.primary,
-a.button:any-link
-{
-  background-color: var(--brand-theme-color);
-  background: var(--brand-theme-color);
-  color: var(--brand-link-color);
-  border-color: var(--brand-theme-color);
-}
-
-a.button.primary:hover,
-button.button.primary:hover,
-a.button:hover
-{
-  background: var(--brand-link-hover-color);
-  border-color: var(--brand-link-hover-color);
-}
