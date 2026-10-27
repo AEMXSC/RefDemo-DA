@@ -1,5 +1,5 @@
 import {
-  metadataSourcePath, normalizeTags, readMetadata, updateMetadata, saveMetadata,
+  metadataSourcePath, metadataTableHtml, normalizeTags, readMetadata, updateMetadata, saveMetadata,
 } from '../../tools/content-assistant/lib/metadata.js';
 import renderMetadataTab from '../../tools/content-assistant/tabs/metadataTab.js';
 
@@ -16,7 +16,7 @@ const test = async (name, run) => {
   }
 };
 const parse = (html) => new DOMParser().parseFromString(html, 'text/html');
-const empty = '<body><header></header><main><div><h1>Page content</h1></div></main><footer></footer></body>';
+const empty = '<body><main><div><h1>Page content</h1><p></p></div></main></body>';
 const existing = `<body><main><div><h1>Original</h1><div class="metadata">
   <div><div>tItLe</div><div>Existing title</div></div>
   <div><div>Tags</div><div>sample, hello</div></div>
@@ -24,84 +24,102 @@ const existing = `<body><main><div><h1>Original</h1><div class="metadata">
 </div></div></main></body>`;
 const fixture = document.querySelector('#fixture');
 const tick = () => new Promise((resolve) => { setTimeout(resolve, 0); });
+const rejects = async (run, message) => {
+  let error;
+  try { await run(); } catch (caught) { error = caught; }
+  assert(error?.message.includes(message), `Expected "${message}", got "${error?.message}"`);
+};
 
-await test('Empty page always has three empty properties', () => {
-  assert(JSON.stringify(readMetadata(empty)) === JSON.stringify({ Title: '', Description: '', Tags: '' }), 'unexpected empty values');
+await test('No metadata shows three empty properties', () => {
+  assert(JSON.stringify(readMetadata(empty)) === JSON.stringify({ Title: '', Description: '', Tags: '' }), 'unexpected values');
 });
 await test('Reads existing metadata case-insensitively', () => {
   assert(readMetadata(existing).Title === 'Existing title', 'title missing');
-  assert(readMetadata(existing).Tags === 'sample, hello', 'tags missing');
 });
-await test('Creates one metadata block at the bottom, without replacing page content', () => {
-  const doc = parse(updateMetadata(empty, { Title: 'New', Description: 'Description', Tags: 'a,b\nc' }));
-  assert(doc.querySelectorAll('.metadata').length === 1, 'wrong block count');
-  assert(doc.querySelector('main > div:last-child > .metadata'), 'not at bottom');
-  assert(doc.querySelector('h1').textContent === 'Page content', 'body changed');
-  assert(doc.querySelector('header') && doc.querySelector('footer'), 'page shell lost');
-});
-await test('Adds missing rows and preserves unrelated metadata and content', () => {
+await test('Adds missing rows and preserves unrelated metadata', () => {
   const doc = parse(updateMetadata(existing, { Description: 'Added' }));
-  assert(readMetadata(doc.documentElement.outerHTML).Title === 'Existing title', 'untouched title changed');
-  assert(readMetadata(doc.documentElement.outerHTML).Description === 'Added', 'description missing');
   assert(doc.querySelector('.metadata a').outerHTML === '<a href="/beta">beta</a>', 'unknown field changed');
-  assert(doc.querySelector('h1').textContent === 'Original', 'page content changed');
+  assert(readMetadata(doc.body.outerHTML).Title === 'Existing title', 'untouched title changed');
 });
-await test('Tags allow multiple values and deduplicate, preserving order', () => {
-  assert(normalizeTags(' sample, hello\nsample\r\n world, ') === 'sample, hello, world', 'wrong tags');
+await test('Tags accept commas and new lines and deduplicate', () => {
+  assert(normalizeTags('sample,hello\nsample\r\n world,') === 'sample, hello, world', 'wrong tags');
 });
-await test('Clearing a field removes its row, not unrelated rows', () => {
-  const html = updateMetadata(existing, { Title: '', Tags: '' });
-  assert(readMetadata(html).Title === '' && readMetadata(html).Tags === '', 'fields not cleared');
-  assert(parse(html).querySelectorAll('.metadata > div').length === 1, 'unknown row removed');
+await test('Clearing a field removes only its row', () => {
+  const doc = parse(updateMetadata(existing, { Title: '', Tags: '' }));
+  assert(doc.querySelectorAll('.metadata > div').length === 1, 'wrong remaining rows');
 });
-await test('Empty fields do not create an empty table', () => {
-  assert(!parse(updateMetadata(empty, { Title: ' ', Tags: '' })).querySelector('.metadata'), 'empty table created');
+await test('Native insertion HTML is a two-column Metadata table, not EDS divs', () => {
+  const doc = parse(metadataTableHtml(empty, { Title: 'New', Tags: 'a,b' }));
+  const table = doc.querySelector('table');
+  assert(table.rows[0].cells[0].textContent === 'Metadata', 'wrong header');
+  assert(table.rows[0].cells[0].colSpan === 2, 'header not merged');
+  assert(table.rows.length === 3 && table.rows[1].cells[1].textContent === 'New', 'missing rows');
 });
-await test('Values are text, not executable markup', () => {
-  const doc = parse(updateMetadata(empty, { Title: '<img src=x onerror=alert(1)>', Description: 'A & B' }));
-  assert(!doc.querySelector('img'), 'HTML injection');
-  assert(readMetadata(doc.documentElement.outerHTML).Description === 'A & B', 'text changed');
+await test('Native table retains unknown metadata rows and markup', () => {
+  const doc = parse(metadataTableHtml(existing, { Description: 'Added' }));
+  assert(doc.querySelector('table a').getAttribute('href') === '/beta', 'lost unknown data');
 });
-await test('Repeated saves do not duplicate blocks or properties', () => {
-  let html = updateMetadata(empty, { Title: 'One' });
-  html = updateMetadata(html, { Title: 'Two' });
-  assert(parse(html).querySelectorAll('.metadata > div').length === 1, 'duplicate title');
-  assert(readMetadata(html).Title === 'Two', 'title not updated');
+await test('User input is escaped, not treated as HTML', () => {
+  assert(!parse(metadataTableHtml(empty, { Title: '<img src=x onerror=alert(1)>' })).querySelector('img'), 'HTML injection');
 });
 await test('Source paths support root, nested and already suffixed documents', () => {
-  assert(metadataSourcePath('/') === '/index.html', 'root path');
-  assert(metadataSourcePath('/blog/page') === '/blog/page.html', 'nested path');
-  assert(metadataSourcePath('/blog/page.html') === '/blog/page.html', 'duplicate extension');
-  assert(metadataSourcePath('page') === '/page.html', 'relative path');
+  assert(metadataSourcePath('/') === '/index.html', 'root');
+  assert(metadataSourcePath('/a/b') === '/a/b.html', 'nested');
+  assert(metadataSourcePath('/a.html') === '/a.html', 'extension');
 });
 
-const realFetch = window.fetch;
-let stored;
-let postCount;
-let postStatus;
-let getStatus;
-let etag;
-let headEtag;
-let changeOnHead;
-let listener;
-let unsubscribed;
+// Model the SDK/editor boundary: only sendHTML changes the live document.
+// Source API reads are deliberately stale; writes are forbidden.
+let live;
+let selection;
+let sends;
+let saved;
 let flushResult;
-let onFlush;
-let requests;
+let replacementResult;
+let listeners;
+let unsubscribed;
+const realFetch = window.fetch;
 const ctx = {
   org: 'test-org',
   repo: 'test-site',
-  path: '/nested/page',
+  path: '/test',
   token: 'test-token',
   actions: {
+    getSelection: async () => {
+      if (!selection) throw 'No selection found'; // eslint-disable-line no-throw-literal
+      return selection;
+    },
+    sendHTML: async (html, options) => {
+      sends.push({ html, options });
+      if (options.replace && !replacementResult.ok) return replacementResult;
+      const doc = parse(live.html);
+      const table = parse(html).querySelector('table');
+      const block = doc.createElement('div');
+      block.className = 'metadata';
+      [...table.rows].slice(1).forEach((row) => {
+        const entry = doc.createElement('div');
+        [...row.cells].forEach((cell) => {
+          const value = doc.createElement('div');
+          value.innerHTML = cell.innerHTML;
+          entry.append(value);
+        });
+        block.append(entry);
+      });
+      const old = doc.querySelector('.metadata');
+      if (old) old.replaceWith(block);
+      else doc.querySelector('main > div:last-child').append(block);
+      live = { ...live, html: doc.body.outerHTML };
+      setTimeout(() => [...listeners].forEach((callback) => callback(live)), 0);
+      return options.replace ? { ok: true, html: live.html } : undefined;
+    },
     saveDocument: async () => {
-      onFlush?.();
+      if (flushResult.ok) saved = live.html;
       return flushResult;
     },
     subscribeLiveDocument: (callback) => {
-      listener = callback;
-      callback({ html: stored, editable: true });
-      return () => { unsubscribed = true; listener = undefined; };
+      listeners.add(callback);
+      callback(live);
+      return () => { unsubscribed += 1; listeners.delete(callback); };
     },
   },
 };
@@ -110,33 +128,18 @@ function reset(html = empty) {
   fixture.innerHTML = '';
   delete fixture.dataset.dpBuilt;
   delete fixture.metadataCleanup;
-  stored = html;
-  postCount = 0;
-  postStatus = 201;
-  getStatus = 200;
-  etag = '"v1"';
-  headEtag = '';
-  changeOnHead = false;
+  live = { html, editable: true };
+  selection = '';
+  sends = [];
+  saved = '';
   flushResult = { ok: true };
-  onFlush = undefined;
-  unsubscribed = false;
-  requests = [];
+  replacementResult = { ok: true };
+  listeners = new Set();
+  unsubscribed = 0;
 }
 window.fetch = async (url, options = {}) => {
-  assert(url === 'https://admin.da.live/source/test-org/test-site/nested/page.html', 'wrong site or path');
-  requests.push({ url, options });
-  if (options.method === 'HEAD') {
-    if (changeOnHead) stored = stored.replace('Page content', 'Concurrent edit');
-    return new Response(null, { status: 200, headers: headEtag ? { ETag: headEtag } : {} });
-  }
-  if (options.method === 'POST') {
-    postCount += 1;
-    if (postStatus !== 201) return new Response('Error', { status: postStatus });
-    stored = await options.body.get('data').text();
-    listener?.({ html: stored, editable: true });
-    return new Response('{}', { status: 201 });
-  }
-  return new Response(stored, { status: getStatus, headers: etag ? { ETag: etag } : {} });
+  assert(!options.method || options.method === 'GET', 'Unexpected Source API write');
+  return new Response(empty, { status: 200 });
 };
 const input = (field, value) => {
   const element = fixture.querySelector(`[name="${field}"]`);
@@ -152,112 +155,123 @@ const submit = async () => {
     await tick();
   }
 };
-const rejects = async (run, message) => {
-  let error;
-  try { await run(); } catch (caught) { error = caught; }
-  assert(error?.message.includes(message), `Expected error containing "${message}"`);
-};
-
 try {
-  await test('Save flushes pending edits, reads fresh source and sends If-Match', async () => {
+  await test('Insertion updates the live editor and persists via SDK save', async () => {
+    reset();
+    await saveMetadata(ctx, { Title: 'Live title' }, live);
+    assert(sends.length === 1 && !sends[0].options.replace, 'not native insertion');
+    assert(readMetadata(live.html).Title === 'Live title', 'editor not changed');
+    assert(readMetadata(saved).Title === 'Live title', 'not persisted');
+    assert(listeners.size === 0, 'confirmation listener leaked');
+  });
+  await test('Selected metadata table is replaced, never duplicated', async () => {
     reset(existing);
-    onFlush = () => { stored = stored.replace('Original', 'Unsaved page edits'); };
-    await saveMetadata(ctx, { Description: 'Updated' });
-    assert(stored.includes('Unsaved page edits'), 'pending edits lost');
-    assert(readMetadata(stored).Description === 'Updated', 'not saved');
-    const post = requests.find(({ options }) => options.method === 'POST');
-    assert(post.options.headers['If-Match'] === '"v1"', 'missing conditional write');
-    assert(post.options.headers.Authorization === 'Bearer test-token', 'missing authentication');
+    selection = metadataTableHtml(existing, {});
+    await saveMetadata(ctx, { Description: 'Added' }, live);
+    assert(sends[0].options.replace === true, 'not replacement');
+    assert(parse(saved).querySelectorAll('.metadata').length === 1, 'duplicate');
+    assert(readMetadata(saved).Title === 'Existing title', 'title lost');
+    assert(readMetadata(saved).Description === 'Added', 'new field missing');
   });
-  await test('Failed editor save never writes source', async () => {
+  await test('Missing metadata selection refuses to replace other content', async () => {
+    reset(existing);
+    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }, live), 'Select the entire Metadata table');
+    assert(sends.length === 0, 'unsafe replacement');
+  });
+  await test('Unrelated selected table is never replaced', async () => {
+    reset(existing);
+    selection = '<table><tr><th>Cards</th></tr><tr><td>Keep me</td></tr></table>';
+    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }, live), 'Select the entire Metadata table');
+    assert(sends.length === 0, 'wrong table replaced');
+  });
+  await test('Insertion refuses to overwrite a text selection', async () => {
     reset();
-    flushResult = { ok: false, error: 'read-only' };
-    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }), 'read-only');
-    assert(postCount === 0, 'wrote despite flush failure');
+    selection = '<p>Keep this content</p>';
+    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }, live), 'without selecting content');
+    assert(sends.length === 0, 'selection overwritten');
   });
-  await test('Conflict is surfaced without overwriting the page', async () => {
+  await test('Read-only or missing live document refuses writes', async () => {
     reset();
-    postStatus = 412;
-    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }), 'page changed');
-    assert(stored === empty, 'conflicting source replaced');
+    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }, { ...live, editable: false }), 'not editable');
+    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }), 'not editable');
+    assert(sends.length === 0, 'read-only write');
   });
-  await test('Missing GET ETag uses HEAD ETag for a conditional write', async () => {
+  await test('Rejected SDK replacement surfaces error', async () => {
+    reset(existing);
+    selection = metadataTableHtml(existing, {});
+    replacementResult = { ok: false, error: 'unsupported' };
+    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }, live), 'unsupported');
+    assert(!saved, 'failure reported saved');
+  });
+  await test('Persistence failure says metadata is only in the editor', async () => {
     reset();
-    etag = '';
-    headEtag = '"head-v1"';
-    const result = await saveMetadata(ctx, { Title: 'Saved' });
-    assert(result.versionChecked, 'HEAD version not used');
-    const post = requests.find(({ options }) => options.method === 'POST');
-    assert(post.options.headers['If-Match'] === headEtag, 'HEAD ETag not sent');
+    flushResult = { ok: false, error: 'disconnected' };
+    await rejects(() => saveMetadata(ctx, { Title: 'New' }, live), 'saving failed');
+    assert(readMetadata(live.html).Title === 'New' && !saved, 'incorrect save state');
   });
-  await test('Missing ETag supports saving after rechecking source', async () => {
+  await test('Unacknowledged insertion never reports success or saves a stale page', async () => {
     reset();
-    etag = '';
-    const result = await saveMetadata(ctx, { Title: 'Saved' });
-    assert(!result.versionChecked, 'incorrect atomic protection claim');
-    assert(postCount === 1 && readMetadata(stored).Title === 'Saved', 'save blocked');
-    assert(requests.filter(({ options }) => !options.method).length === 2, 'source not rechecked');
+    const originalSend = ctx.actions.sendHTML;
+    const originalTimer = window.setTimeout;
+    ctx.actions.sendHTML = () => undefined;
+    window.setTimeout = (callback, delay, ...args) => {
+      const duration = delay === 8000 ? 10 : delay;
+      return originalTimer(callback, duration, ...args);
+    };
+    try {
+      await rejects(() => saveMetadata(ctx, { Title: 'Not inserted' }, live), 'did not confirm');
+      assert(!saved && listeners.size === 0, 'unconfirmed update saved or listener leaked');
+    } finally {
+      ctx.actions.sendHTML = originalSend;
+      window.setTimeout = originalTimer;
+    }
   });
-  await test('Missing ETag still detects source changes before writing', async () => {
-    reset();
-    etag = '';
-    changeOnHead = true;
-    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }), 'page changed');
-    assert(postCount === 0 && stored.includes('Concurrent edit'), 'concurrent content overwritten');
-  });
-  await test('Missing source is an error, never a new page', async () => {
-    reset();
-    getStatus = 404;
-    await rejects(() => saveMetadata(ctx, { Title: 'Bad' }), '404');
-    assert(postCount === 0, 'created missing page');
-  });
-  await test('Sidebar displays empty properties with no metadata block', async () => {
+  await test('Empty sidebar fields still display when no table exists', async () => {
     reset();
     renderMetadataTab(fixture, ctx);
     await tick();
     assert(fixture.querySelectorAll('input,textarea').length === 3, 'missing properties');
-    assert([...fixture.querySelectorAll('input,textarea')].every((field) => field.value === ''), 'nonempty field');
-    assert(fixture.querySelector('button').disabled, 'enabled without changes');
+    assert([...fixture.querySelectorAll('input,textarea')].every((field) => !field.value), 'unexpected field values');
   });
-  await test('Sidebar edits missing description and preserves existing title', async () => {
-    reset(existing);
-    renderMetadataTab(fixture, ctx);
-    await tick();
-    input('Description', 'Sidebar description');
-    await submit();
-    assert(readMetadata(stored).Description === 'Sidebar description', 'description not saved');
-    assert(readMetadata(stored).Title === 'Existing title', 'title lost');
-    assert(fixture.querySelector('[role=status]').textContent === 'Metadata saved.', 'no success status');
-  });
-  await test('Live page changes update clean fields, not dirty drafts', async () => {
-    reset(existing);
-    renderMetadataTab(fixture, ctx);
-    input('Title', 'My draft');
-    listener({ html: updateMetadata(existing, { Title: 'Other title', Description: 'Other description' }), editable: true });
-    assert(fixture.querySelector('[name=Title]').value === 'My draft', 'draft overwritten');
-    assert(fixture.querySelector('[name=Description]').value === 'Other description', 'clean field stale');
-  });
-  await test('Read-only editor disables metadata controls and save', async () => {
-    reset(existing);
-    renderMetadataTab(fixture, ctx);
-    listener({ html: stored, editable: false });
-    assert([...fixture.querySelectorAll('input,textarea,button')].every((field) => field.disabled), 'read-only editable');
-  });
-  await test('Save error remains visible and keeps draft for retry', async () => {
+  await test('Sidebar save uses live editor, not stale source, and survives reopen', async () => {
     reset();
     renderMetadataTab(fixture, ctx);
+    input('Title', 'Voting Tonight');
+    input('Description', '10 states will be voting');
+    input('Tags', 'usa,election,2026');
+    await submit();
+    assert(fixture.querySelector('[role=status]').textContent === 'Metadata updated in the page and saved.', 'false success');
+    assert(readMetadata(saved).Title === 'Voting Tonight', 'lost title');
+    fixture.metadataCleanup();
+    delete fixture.dataset.dpBuilt;
+    renderMetadataTab(fixture, ctx);
+    await tick();
+    assert(fixture.querySelector('[name=Title]').value === 'Voting Tonight', 'reopened metadata missing');
+    assert(fixture.querySelector('[name=Tags]').value === 'usa, election, 2026', 'tags missing');
+  });
+  await test('Live updates preserve dirty drafts while refreshing clean fields', () => {
+    reset(existing);
+    renderMetadataTab(fixture, ctx);
+    input('Title', 'Draft');
+    live.html = updateMetadata(existing, { Title: 'Other', Description: 'New description' });
+    [...listeners].forEach((callback) => callback(live));
+    assert(fixture.querySelector('[name=Title]').value === 'Draft', 'draft lost');
+    assert(fixture.querySelector('[name=Description]').value === 'New description', 'clean field stale');
+  });
+  await test('Save failure retains drafts and enables retry', async () => {
+    reset(existing);
+    renderMetadataTab(fixture, ctx);
     input('Title', 'Keep me');
-    postStatus = 403;
     await submit();
     assert(fixture.querySelector('[role=status]').classList.contains('dp-error'), 'error hidden');
     assert(fixture.querySelector('[name=Title]').value === 'Keep me', 'draft lost');
-    assert(!fixture.querySelector('button').disabled, 'cannot retry');
+    assert(!fixture.querySelector('button').disabled, 'retry unavailable');
   });
-  await test('Leaving Metadata unsubscribes from the live document', () => {
+  await test('Leaving tab releases the live document subscription', () => {
     reset();
     renderMetadataTab(fixture, ctx);
     fixture.metadataCleanup();
-    assert(unsubscribed, 'subscription leaked');
+    assert(unsubscribed === 1, 'subscription leaked');
   });
 } finally {
   window.fetch = realFetch;

@@ -8,7 +8,8 @@ export default function renderMetadataTab(container, ctx) {
   container.innerHTML = `
     <form class="dp-metadata">
       <strong>Metadata</strong>
-      <p class="dp-subtle">Page properties. Save to update the page's metadata table.</p>
+      <p class="dp-subtle">To add metadata, place the cursor on an empty line at the page bottom.
+        To update metadata, select the entire Metadata table using its table selection handle.</p>
       <label for="dp-metadata-title">Title</label>
       <input id="dp-metadata-title" name="Title" type="text">
       <label for="dp-metadata-description">Description</label>
@@ -30,6 +31,7 @@ export default function renderMetadataTab(container, ctx) {
   let disposed = false;
   let liveReceived = false;
   let unsubscribe;
+  let snapshot;
 
   const updateButton = () => {
     button.disabled = !ready || saving || !editable || dirty.size === 0;
@@ -62,13 +64,11 @@ export default function renderMetadataTab(container, ctx) {
     setStatus('Saving metadata...');
     updateButton();
     try {
-      const { versionChecked } = await saveMetadata(ctx, changes);
+      const html = await saveMetadata(ctx, changes, snapshot);
       dirty.clear();
       if (!disposed) {
-        populate((await loadMetadataSource(ctx)).html);
-        setStatus(versionChecked
-          ? 'Metadata saved.'
-          : 'Metadata saved. DA did not provide a version header; avoid simultaneous edits while saving.');
+        populate(html);
+        setStatus('Metadata updated in the page and saved.');
       }
     } catch (error) {
       if (!disposed) setStatus(error.message || 'Could not save metadata.', true);
@@ -83,11 +83,12 @@ export default function renderMetadataTab(container, ctx) {
     unsubscribe?.();
   };
   if (typeof ctx.actions.subscribeLiveDocument === 'function') {
-    unsubscribe = ctx.actions.subscribeLiveDocument((snapshot) => {
+    unsubscribe = ctx.actions.subscribeLiveDocument((live) => {
       if (disposed) return;
       liveReceived = true;
-      editable = snapshot.editable !== false;
-      populate(snapshot.html);
+      snapshot = live;
+      editable = live.editable !== false;
+      populate(live.html);
       form.querySelectorAll('input, textarea').forEach((input) => {
         input.disabled = saving || !editable;
       });

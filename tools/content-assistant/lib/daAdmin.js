@@ -75,20 +75,16 @@ export async function putJsonSource({
  * not a raw JSON blob.
  */
 export async function putHtmlSource({
-  org, repo, path, token, html, etag,
+  org, repo, path, token, html,
 }) {
   const body = new FormData();
   body.append('data', new Blob([html], { type: 'text/html' }), 'document.html');
   const resp = await fetch(sourcePath(org, repo, path), {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(etag ? { 'If-Match': etag } : {}),
-    },
+    headers: { Authorization: `Bearer ${token}` },
     body,
   });
   if (!resp.ok) {
-    if (resp.status === 412) throw new Error('The page changed while saving. Please try again.');
     const text = await resp.text().catch(() => '');
     throw new Error(`putHtmlSource ${path} -> HTTP ${resp.status} ${text.slice(0, 200)}`);
   }

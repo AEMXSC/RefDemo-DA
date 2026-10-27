@@ -1,5 +1,4 @@
 import { DA_ADMIN_ORIGIN } from '../config.js';
-import { putHtmlSource } from './daAdmin.js';
 
 export const METADATA_FIELDS = ['Title', 'Description', 'Tags'];
 
@@ -75,40 +74,95 @@ export async function loadMetadataSource(ctx) {
     cache: 'no-store',
   });
   if (!resp.ok) throw new Error(`Could not read page metadata (HTTP ${resp.status}).`);
-  return { html: await resp.text(), etag: resp.headers.get('etag'), path };
+  return { html: await resp.text() };
 }
 
-export async function saveMetadata(ctx, changes) {
-  if (typeof ctx.actions.saveDocument !== 'function') {
-    throw new Error('This DA editor cannot save pending edits. Open the page in DA Canvas.');
-  }
-  const saved = await ctx.actions.saveDocument();
-  if (!saved?.ok) {
-    throw new Error(`Could not save pending page edits: ${saved?.error || 'unknown error'}. Metadata was not changed.`);
-  }
-  const source = await loadMetadataSource(ctx);
-  if (!source.etag) {
-    const head = await fetch(`${DA_ADMIN_ORIGIN}/source/${ctx.org}/${ctx.repo}${source.path}`, {
-      method: 'HEAD',
-      headers: { Authorization: `Bearer ${ctx.token}` },
-      cache: 'no-store',
+export function metadataTableHtml(html, changes) {
+  const updated = new DOMParser().parseFromString(updateMetadata(html, changes), 'text/html');
+  const metadata = updated.querySelector('main .metadata');
+  const table = updated.createElement('table');
+  const heading = table.insertRow().insertCell();
+  heading.colSpan = 2;
+  heading.textContent = 'Metadata';
+  [...(metadata?.children || [])].forEach((row) => {
+    const cells = table.insertRow();
+    [...row.children].forEach((cell) => {
+      cells.insertCell().innerHTML = cell.innerHTML;
     });
-    if (!head.ok) throw new Error(`Could not check the page version (HTTP ${head.status}).`);
-    source.etag = head.headers.get('etag');
-  }
-  if (!source.etag) {
-    const latest = await loadMetadataSource(ctx);
-    if (latest.html !== source.html) {
-      throw new Error('The page changed while saving. Please try again.');
-    }
-    // Older DA deployments do not expose ETag. This check is best-effort,
-    // not an atomic replacement for If-Match.
-    // eslint-disable-next-line no-console
-    console.warn('[content-assistant] DA did not expose ETag; metadata save uses a source-content recheck.');
-  }
-  const html = updateMetadata(source.html, changes);
-  await putHtmlSource({
-    org: ctx.org, repo: ctx.repo, token: ctx.token, path: source.path, etag: source.etag, html,
   });
-  return { versionChecked: Boolean(source.etag) };
+  return table.outerHTML;
+}
+
+export async function saveMetadata(ctx, changes, snapshot) {
+  if (!snapshot || snapshot.editable === false) {
+    throw new Error('The live page is not editable. Open Content mode and try again.');
+  }
+  const { actions } = ctx;
+  if (!actions.sendHTML || !actions.getSelection || !actions.subscribeLiveDocument
+    || !actions.saveDocument) {
+    throw new Error('This DA editor does not support live metadata editing. Open the page in DA Canvas.');
+  }
+  const existing = new DOMParser().parseFromString(snapshot.html, 'text/html')
+    .querySelector('main .metadata');
+  let selection = '';
+  try {
+    selection = await actions.getSelection();
+  } catch (error) {
+    // DA returns this specific response for a collapsed insertion cursor.
+    if (error !== 'No selection found') {
+      throw new Error(`Could not check the editor selection: ${error.message || error}`);
+    }
+  }
+  if (existing) {
+    const selected = new DOMParser().parseFromString(selection, 'text/html');
+    const tables = selected.body.querySelectorAll('table');
+    if (tables.length !== 1 || selected.body.children.length !== 1
+      || tables[0].rows[0]?.cells[0]?.textContent.trim().toLowerCase() !== 'metadata'
+      || tables[0].outerHTML !== selected.body.firstElementChild.outerHTML) {
+      throw new Error('Select the entire Metadata table using its table selection handle, then click Save metadata.');
+    }
+  } else if (selection.trim()) {
+    throw new Error('Place the cursor on an empty line at the bottom of the page, without selecting content, then click Save metadata.');
+  }
+
+  const updated = updateMetadata(snapshot.html, changes);
+  const expected = readMetadata(updated);
+  const table = metadataTableHtml(snapshot.html, changes);
+  // Insertion has no SDK acknowledgement. Require a live-document echo before
+  // reporting success, rather than treating postMessage delivery as a save.
+  const confirmedHtml = await new Promise((resolve, reject) => {
+    let unsubscribe;
+    let timer;
+    const finish = (error, html) => {
+      clearTimeout(timer);
+      unsubscribe?.();
+      if (error) reject(error);
+      else resolve(html);
+    };
+    timer = setTimeout(() => finish(new Error('DA did not confirm the metadata update. Check the page before retrying.')), 8000);
+    unsubscribe = actions.subscribeLiveDocument((live) => {
+      if (live.html === snapshot.html) return;
+      const actual = readMetadata(live.html);
+      const hasTable = new DOMParser().parseFromString(live.html, 'text/html').querySelector('main .metadata');
+      if (hasTable && METADATA_FIELDS.every((field) => actual[field] === expected[field])) {
+        finish(null, live.html);
+      }
+    });
+    Promise.resolve().then(() => actions.sendHTML(table, existing ? { replace: true } : {}))
+      .then((result) => {
+        if (existing && !result?.ok) finish(new Error(result?.message || result?.error || 'DA rejected the metadata update.'));
+        else if (existing && result?.html) {
+          const actual = readMetadata(result.html);
+          if (METADATA_FIELDS.every((field) => actual[field] === expected[field])) {
+            finish(null, result.html);
+          }
+        }
+      })
+      .catch(finish);
+  });
+  const saved = await actions.saveDocument();
+  if (!saved?.ok) {
+    throw new Error(`Metadata is in the editor, but saving failed: ${saved?.error || 'unknown error'}. Keep the page open and retry saving.`);
+  }
+  return confirmedHtml;
 }
