@@ -15,6 +15,7 @@ import { uploadImagesToDa } from '../lib/uploadImages.js';
 import { uploadAssetsInBatches } from '../lib/uploadAssets.js';
 import { copyDaAssetToClipboard, copyDamAssetToClipboard } from '../lib/clipboard.js';
 import { openScrapeModal } from '../lib/scrapeModal.js';
+import openGenerateImageModal from '../lib/generateImageModal.js';
 import { mountAssetBrowser } from '../lib/assetBrowser.js';
 import { mountAssetSelector, repositoryIdFromAuthorUrl } from '../lib/assetSelector.js';
 import { track, EVENTS } from '../lib/analytics.js';
@@ -180,6 +181,11 @@ export default function renderImagesTab(container, ctx) {
       <div class="dp-images-tab">
         <div class="dp-row">
           <strong>Images</strong>
+          <button type="button" id="dp-images-refresh" class="dp-images-refresh" title="Refresh images" aria-label="Refresh images">
+            <svg class="dp-images-refresh-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.6-1L20 9M4 15l2.3 3A7 7 0 0 0 17.9 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
         </div>
         <div class="dp-row dp-inline-field-row">
           <label class="dp-inline-field-label" for="dp-asset-source">Asset Source</label>
@@ -194,6 +200,7 @@ export default function renderImagesTab(container, ctx) {
         <div id="dp-da-asset-mount" class="dp-browser-mount"></div>
         <div id="dp-aem-asset-mount" class="dp-selector-mount" hidden></div>
         <div class="dp-import-footer">
+          <button type="button" id="dp-images-generate" class="dp-images-generate">Generate Image</button>
           <button type="button" id="dp-images-import" class="dp-import-fab" title="Import from URL" aria-label="Import from URL">
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h4l2.5 2.5V12.5A1.5 1.5 0 0 1 9 14H4a1.5 1.5 0 0 1-1.5-1.5Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
@@ -209,6 +216,22 @@ export default function renderImagesTab(container, ctx) {
       state.imageAssetSource = e.target.value;
       container.querySelector('#dp-selector-error').textContent = '';
       rerender();
+    });
+
+    container.querySelector('#dp-images-refresh').addEventListener('click', () => {
+      delete container.querySelector('#dp-da-asset-mount').dataset.mountKey;
+      state.selectorRefresh = (state.selectorRefresh || 0) + 1;
+      rerender();
+    });
+
+    container.querySelector('#dp-images-generate').addEventListener('click', () => {
+      openGenerateImageModal(ctx, () => {
+        state.imageAssetSource = 'da';
+        state.generatedImagesAvailable = true;
+        if (!container.isConnected || state.activeTab !== 'images') return;
+        delete container.querySelector('#dp-da-asset-mount').dataset.mountKey;
+        rerender();
+      });
     });
 
     container.querySelector('#dp-images-import').addEventListener('click', () => {
@@ -241,11 +264,16 @@ export default function renderImagesTab(container, ctx) {
   const repositoryId = repositoryIdFromAuthorUrl(ctx.authorUrl);
   errorEl.textContent = '';
 
-  const daImageRoots = ctx.daImageRoots || [ASSETS_FOLDER];
+  const configuredRoots = ctx.daImageRoots || [ASSETS_FOLDER];
+  const daImageRoots = state.generatedImagesAvailable
+    ? [...new Set([ASSETS_FOLDER, ...configuredRoots])] : configuredRoots;
   const daMountKey = `${ctx.token}|${ctx.org}|${ctx.repo}|${JSON.stringify(daImageRoots)}`;
   if (daMount.dataset.mountKey !== daMountKey && ctx.token && ctx.org && ctx.repo) {
     daMount.dataset.mountKey = daMountKey;
     daMount.innerHTML = '';
+    const refresh = container.querySelector('#dp-images-refresh');
+    refresh.disabled = true;
+    refresh.setAttribute('aria-busy', 'true');
     mountAssetBrowser(daMount, {
       token: ctx.token,
       org: ctx.org,
@@ -257,6 +285,9 @@ export default function renderImagesTab(container, ctx) {
       if (state.imageAssetSource === 'da') {
         errorEl.textContent = (err && err.message) || 'Could not load the assets folder.';
       }
+    }).finally(() => {
+      refresh.disabled = false;
+      refresh.removeAttribute('aria-busy');
     });
   }
 

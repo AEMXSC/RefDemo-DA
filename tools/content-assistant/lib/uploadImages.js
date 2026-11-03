@@ -60,7 +60,7 @@ async function fetchImageBlobDirect(sourceUrl) {
  * to get-dam-asset (see lib/clipboard.js) — POST { url }, get back
  * { body: { contentType, base64 } }.
  */
-async function fetchImageBlob(sourceUrl) {
+export async function fetchImageBlob(sourceUrl) {
   if (!FETCH_IMAGE_ACTION_URL) return fetchImageBlobDirect(sourceUrl);
 
   const resp = await fetch(FETCH_IMAGE_ACTION_URL, {

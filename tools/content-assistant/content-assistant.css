@@ -538,6 +538,92 @@ body {
   background: transparent;
 }
 
+.dp-images-tab .dp-images-generate {
+  margin-right: auto;
+  padding: 8px 14px;
+  border: 1px solid #1473e6;
+  border-radius: 16px;
+  background: #1473e6;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dp-images-tab .dp-images-refresh {
+  display: flex;
+  padding: 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+}
+
+.dp-images-tab .dp-images-refresh-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.dp-images-tab .dp-images-refresh:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.dp-generation {
+  width: min(640px, 94vw);
+  max-height: 90vh;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #222;
+}
+
+.dp-generation::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+
+.dp-generation form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dp-generation .dp-generation-button {
+  padding: 8px 12px;
+  border: 1px solid #1473e6;
+  border-radius: 4px;
+  background: #fff;
+  color: #1473e6;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dp-generation .dp-generation-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.dp-generation .dp-generation-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.dp-generation .dp-generation-results label {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dp-generation .dp-generation-preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
 .dp-import-fab {
   padding: 0;
   display: flex;

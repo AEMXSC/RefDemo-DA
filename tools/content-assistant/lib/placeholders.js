@@ -33,9 +33,11 @@ export async function fetchImageSettings({ org, repo, token }) {
     || damImportFolders.some((path) => path !== '/content/dam' && !path.startsWith('/content/dam/'))) {
     throw new Error('"aem-import-folder" must be a single path within /content/dam.');
   }
+  const firefly = rows.find((row) => (row.key || row.Key) === 'firefly-generate-url');
   return {
     daImageRoots: daImageRoots.length ? daImageRoots : [ASSETS_FOLDER],
     damFolderPath: damImportFolders[0] || '/content/dam/imported-assets/en',
+    fireflyGenerateUrl: String(firefly?.value || firefly?.Text || '').trim(),
   };
 }
 
