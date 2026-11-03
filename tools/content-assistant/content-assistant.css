@@ -538,14 +538,21 @@ body {
   background: transparent;
 }
 
+.dp-images-tab .dp-images-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .dp-images-tab .dp-images-generate {
-  margin-right: auto;
-  padding: 8px 14px;
+  padding: 5px 12px;
   border: 1px solid #1473e6;
   border-radius: 16px;
   background: #1473e6;
   color: #fff;
   font: inherit;
+  font-size: 13px;
+  line-height: 20px;
   cursor: pointer;
 }
 
