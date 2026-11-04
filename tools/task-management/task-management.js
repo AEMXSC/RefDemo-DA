@@ -8,6 +8,7 @@ import 'https://da.live/nx/public/sl/components.js';
 
 // Application styles (adopted into the shadow root)
 import loadStyle from '../../scripts/utils/styles.js';
+import { sendAnalyticsData } from '../../scripts/script.js';
 
 const styles = await loadStyle(import.meta.url);
 
@@ -973,6 +974,22 @@ class RefDemoTaskManagement extends LitElement {
     }
   }
 
+  async sendAnalyticsForReview() {
+    const analyticsData = [
+      { key: 'eVar16', value: 'da-task-management' },
+      { key: 'events', value: 'event7' },
+      { key: 'pageName', value: 'DATaskManagementUsageInfo' },
+    ];
+
+    if (typeof sendAnalyticsData === 'function') {
+      await sendAnalyticsData(analyticsData);
+    } else if (typeof window.sendAnalyticsData === 'function') {
+      await window.sendAnalyticsData(analyticsData);
+    } else {
+      console.warn('sendAnalyticsData is not available');
+    }
+  }
+
   /* ── Renderers ── */
 
   renderConfirm() {
@@ -987,7 +1004,10 @@ class RefDemoTaskManagement extends LitElement {
         </p>
         <div class="task-management-actions">
           <sl-button class="secondary" @click=${this.close}>No</sl-button>
-          <sl-button ?disabled=${!this._serviceUrl} @click=${this.run}>Yes</sl-button>
+          <sl-button ?disabled=${!this._serviceUrl} @click=${async () => {
+            await this.sendAnalyticsForReview();
+            this.run();
+          }}>Yes</sl-button>
         </div>
       </div>`;
   }
@@ -1305,6 +1325,20 @@ class RefDemoTaskManagement extends LitElement {
   }
 
   render() {
+
+    const analyticsData = [
+      { key: 'eVar16', value: 'da-task-management' },
+      { key: 'pageName', value: 'DATaskManagementUsageInfo' },
+    ];
+
+    if (typeof sendAnalyticsData === 'function') {
+      await sendAnalyticsData(analyticsData);
+    } else if (typeof window.sendAnalyticsData === 'function') {
+      await window.sendAnalyticsData(analyticsData);
+    } else {
+      console.warn('sendAnalyticsData is not available');
+    }
+
     if (this._allowed === undefined) return nothing; // gate not resolved yet
     if (!this._allowed) return this.renderNoAccess();
 
