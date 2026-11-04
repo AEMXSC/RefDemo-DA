@@ -975,16 +975,16 @@ class RefDemoTaskManagement extends LitElement {
   }
 
   async sendAnalyticsForReview() {
-    const analyticsData = [
+    const analyticsTaskmanagementData = [
       { key: 'eVar16', value: 'da-task-management' },
       { key: 'events', value: 'event7' },
       { key: 'pageName', value: 'DATaskManagementUsageInfo' },
     ];
 
     if (typeof sendAnalyticsData === 'function') {
-      await sendAnalyticsData(analyticsData);
+      await sendAnalyticsData(analyticsTaskmanagementData);
     } else if (typeof window.sendAnalyticsData === 'function') {
-      await window.sendAnalyticsData(analyticsData);
+      await window.sendAnalyticsData(analyticsTaskmanagementData);
     } else {
       console.warn('sendAnalyticsData is not available');
     }
@@ -1326,15 +1326,15 @@ class RefDemoTaskManagement extends LitElement {
 
   render() {
 
-    const analyticsData = [
+    const analyticsTaskmanagementData = [
       { key: 'eVar16', value: 'da-task-management' },
       { key: 'pageName', value: 'DATaskManagementUsageInfo' },
     ];
 
     if (typeof sendAnalyticsData === 'function') {
-      await sendAnalyticsData(analyticsData);
+      await sendAnalyticsData(analyticsTaskmanagementData);
     } else if (typeof window.sendAnalyticsData === 'function') {
-      await window.sendAnalyticsData(analyticsData);
+      await window.sendAnalyticsData(analyticsTaskmanagementData);
     } else {
       console.warn('sendAnalyticsData is not available');
     }
