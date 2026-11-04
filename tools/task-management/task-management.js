@@ -1324,21 +1324,26 @@ class RefDemoTaskManagement extends LitElement {
         @click=${() => this.selectTab(id)}>${label}</button>`;
   }
 
-  render() {
-
+  async firstUpdated() {
     const analyticsTaskmanagementData = [
       { key: 'eVar16', value: 'da-task-management' },
       { key: 'pageName', value: 'DATaskManagementUsageInfo' },
     ];
-
-    if (typeof sendAnalyticsData === 'function') {
-      await sendAnalyticsData(analyticsTaskmanagementData);
-    } else if (typeof window.sendAnalyticsData === 'function') {
-      await window.sendAnalyticsData(analyticsTaskmanagementData);
-    } else {
-      console.warn('sendAnalyticsData is not available');
+  
+    try {
+      if (typeof sendAnalyticsData === 'function') {
+        await sendAnalyticsData(analyticsTaskmanagementData);
+      } else if (typeof window.sendAnalyticsData === 'function') {
+        await window.sendAnalyticsData(analyticsTaskmanagementData);
+      } else {
+        console.warn('sendAnalyticsData is not available');
+      }
+    } catch (e) {
+      console.error('Task management analytics failed:', e);
     }
-
+  }
+  
+  render() {
     if (this._allowed === undefined) return nothing; // gate not resolved yet
     if (!this._allowed) return this.renderNoAccess();
 
