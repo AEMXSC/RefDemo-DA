@@ -449,12 +449,8 @@ async function getClientIP() {
   }
 }
 
-export async function sendAnalyticsData(eVarNEventsData = [], aemHost) {
+export async function sendAnalyticsData(eVarNEventsData = []) {
   try {
-    if (!aemHost) {
-      console.warn('[Extension Usage] sendAnalyticsData');
-      return null;
-    }
 
     const clientIP = await getClientIP();
     const pageURL = window.location.href;
