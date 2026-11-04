@@ -8,7 +8,7 @@ import 'https://da.live/nx/public/sl/components.js';
 
 // Application styles (adopted into the shadow root)
 import loadStyle from '../../scripts/utils/styles.js';
-import { sendAnalyticsData } from '../../scripts/scripts.js';
+import { sendAnalyticsData } from '../../scripts/utils/analytics.js';
 
 const styles = await loadStyle(import.meta.url);
 
