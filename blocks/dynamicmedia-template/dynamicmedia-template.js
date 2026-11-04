@@ -57,6 +57,7 @@ export default async function decorate(block) {
         alt: 'dm-template-image',
       });
       finalImg.onerror = () => {
+        finalImg.onerror = null; // prevent infinite retry
         finalImg.src = 'https://smartimaging.scene7.com/is/image/DynamicMediaNA/WKND%20Template?wid=2000&hei=2000&qlt=100&fit=constrain';
         finalImg.alt = 'Fallback image - template image not correctly authored';
       };
