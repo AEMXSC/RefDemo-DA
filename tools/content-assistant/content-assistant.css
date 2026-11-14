@@ -86,14 +86,14 @@ body {
 
 .dp-metadata input,
 .dp-metadata textarea {
-  width: 100%;
-  min-width: 0;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
-  color: inherit;
-  font: inherit;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 13px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }
 
 .dp-metadata textarea {
