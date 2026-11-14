@@ -43,7 +43,6 @@ export async function renderThemeTab(container, ctx) {
     container.innerHTML = `
       <div class="dp-images-tab">
         <div class="dp-row">
-          <strong>Theme</strong>
         </div>
         <p class="dp-status" id="dp-theme-status"></p>
         <div id="dp-theme-list"></div>
