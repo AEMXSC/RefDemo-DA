@@ -63,20 +63,36 @@ body {
 .dp-metadata {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 8px;
+}
+
+.dp-metadata > strong {
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.dp-metadata p {
+  margin: 0;
+  line-height: 1.5;
 }
 
 .dp-metadata label {
   margin-top: 8px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
+  color: #555;
 }
 
 .dp-metadata input,
 .dp-metadata textarea {
   width: 100%;
-  padding: 8px;
+  min-width: 0;
+  padding: 6px 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  background: #fff;
+  color: inherit;
   font: inherit;
 }
 
@@ -84,21 +100,59 @@ body {
   resize: vertical;
 }
 
+.dp-metadata input:disabled,
+.dp-metadata textarea:disabled {
+  background: #fafafa;
+  color: #666;
+}
+
+.dp-metadata input:focus-visible,
+.dp-metadata textarea:focus-visible {
+  outline: 2px solid #1473e6;
+  outline-offset: 3px;
+}
+
+.dp-images-tab .dp-images-generate,
 .dp-metadata button[type="submit"] {
-  align-self: flex-start;
-  padding: 8px 16px;
-  border: none;
+  padding: 5px 12px;
+  border: 1px solid #1473e6;
   border-radius: 16px;
   background: #1473e6;
   color: #fff;
   font: inherit;
+  font-size: 13px;
+  line-height: 20px;
   cursor: pointer;
 }
 
+.dp-metadata button[type="submit"] {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+
 .dp-metadata button[type="submit"]:disabled {
+  border-color: #eee;
   background: #eee;
   color: #666;
   cursor: default;
+}
+
+.dp-metadata button[type="submit"]:hover:not(:disabled) {
+  background: #0d66d0;
+}
+
+.dp-metadata button:focus-visible {
+  outline: 2px solid #1473e6;
+  outline-offset: 3px;
+}
+
+.dp-metadata .dp-metadata-status:not(.dp-error) {
+  color: #666;
+  font-size: 12px;
+}
+
+.dp-metadata .dp-metadata-status:empty {
+  display: none;
 }
 
 .dp-metadata .dp-metadata-tags {
@@ -542,18 +596,6 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.dp-images-tab .dp-images-generate {
-  padding: 5px 12px;
-  border: 1px solid #1473e6;
-  border-radius: 16px;
-  background: #1473e6;
-  color: #fff;
-  font: inherit;
-  font-size: 13px;
-  line-height: 20px;
-  cursor: pointer;
 }
 
 .dp-images-tab .dp-images-refresh {
