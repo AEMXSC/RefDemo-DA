@@ -180,7 +180,6 @@ export default function renderImagesTab(container, ctx) {
     container.innerHTML = `
       <div class="dp-images-tab">
         <div class="dp-row">
-          <strong>Images</strong>
           <div class="dp-images-actions">
           <button type="button" id="dp-images-generate" class="dp-images-generate">Generate</button>
           <button type="button" id="dp-images-refresh" class="dp-images-refresh" title="Refresh images" aria-label="Refresh images">
