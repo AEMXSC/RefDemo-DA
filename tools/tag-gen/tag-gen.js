@@ -32,8 +32,13 @@ class ADLTagGen extends LitElement {
 
   async generateTags() {
     this._status = 'Generating tags...';
-    this._genTags = await loadGenTags(this.path, this.token);
-    this._status = undefined;
+    let errorMessage;
+    try {
+      this._genTags = await loadGenTags(this.path, this.token);
+    } catch (error) {
+      errorMessage = error.message || 'Could not generate tags.';
+    }
+    this._status = errorMessage;
   }
 
   async updateTags() {

@@ -61,14 +61,19 @@ const getMetadata = (el) => [...el.childNodes].reduce((rdx, row) => {
   return rdx;
 }, {});
 
-export async function loadGenTags(path, token) {
-  const { html } = await fetchDoc(path, token);
+export async function loadGenTags(path, token, pageHtml) {
+  const { html, message } = pageHtml === undefined
+    ? await fetchDoc(path, token) : { html: pageHtml };
+  if (!html) throw new Error(message || 'Could not fetch doc.');
   const baseOpts = getOpts(token, 'POST');
   const opts = { ...baseOpts, body: JSON.stringify({ html }) };
-  const resp = await fetch(`https://da-etc.adobeaem.workers.dev/tags`, opts);
-  if (!resp.ok) return [];
+  const resp = await fetch('https://da-etc.adobeaem.workers.dev/tags', opts);
+  if (!resp.ok) throw new Error(`Could not generate tags (HTTP ${resp.status}).`);
   const { tags } = await resp.json();
-  return tags;
+  if (!Array.isArray(tags) || !tags.every((tag) => typeof tag === 'string')) {
+    throw new Error('The tag generation service returned invalid tags.');
+  }
+  return tags.map((tag) => tag.trim()).filter(Boolean);
 }
 
 export async function loadPageTags(path, token) {

@@ -1,7 +1,8 @@
 import {
-  METADATA_FIELDS, loadMetadataSource, readMetadata, saveMetadata,
+  METADATA_FIELDS, loadMetadataSource, mergeTags, readMetadata, saveMetadata,
 } from '../lib/metadata.js';
 import { findTag, loadTags } from '../lib/tags.js';
+import { loadGenTags } from '../../tag-gen/utils.js';
 
 export default function renderMetadataTab(container, ctx) {
   if (container.dataset.dpBuilt) return;
@@ -14,7 +15,10 @@ export default function renderMetadataTab(container, ctx) {
       <input id="dp-metadata-title" name="Title" type="text">
       <label for="dp-metadata-description">Description</label>
       <textarea id="dp-metadata-description" name="Description" rows="4"></textarea>
-      <label for="dp-metadata-tag-search">Tags</label>
+      <div class="dp-metadata-tags-heading">
+        <label for="dp-metadata-tag-search">Tags</label>
+        <button type="button" class="dp-metadata-generate" disabled>Generate Tags</button>
+      </div>
       <ul class="dp-metadata-tags" aria-label="Selected tags"></ul>
       <input id="dp-metadata-tag-search" type="text" list="dp-metadata-tag-options"
         autocomplete="off" placeholder="Search tags..." aria-describedby="dp-metadata-tags-help">
@@ -27,6 +31,7 @@ export default function renderMetadataTab(container, ctx) {
   `;
   const form = container.querySelector('form');
   const button = form.querySelector('button[type="submit"]');
+  const generateButton = form.querySelector('.dp-metadata-generate');
   const status = form.querySelector('[role="status"]');
   const tagSearch = form.querySelector('#dp-metadata-tag-search');
   const tagList = form.querySelector('.dp-metadata-tags');
@@ -38,13 +43,17 @@ export default function renderMetadataTab(container, ctx) {
   const dirty = new Set();
   let ready = false;
   let saving = false;
+  let generating = false;
   let editable = true;
   let disposed = false;
   let unsubscribe;
   let snapshot;
 
   const updateButton = () => {
-    button.disabled = !ready || saving || !editable || dirty.size === 0;
+    button.disabled = !ready || saving || generating || !editable || dirty.size === 0;
+    generateButton.disabled = !ready || saving || generating || !editable;
+    generateButton.textContent = generating ? 'Generating...' : 'Generate Tags';
+    generateButton.setAttribute('aria-busy', String(generating));
   };
   const setStatus = (message, error = false) => {
     status.textContent = message;
@@ -57,9 +66,10 @@ export default function renderMetadataTab(container, ctx) {
   };
   const setControlsDisabled = () => {
     form.querySelectorAll('input, textarea, .dp-metadata-tags button').forEach((input) => {
-      input.disabled = saving || !editable;
+      input.disabled = saving || generating || !editable;
     });
-    tagSearch.disabled = saving || !editable || !tags.length;
+    tagSearch.disabled = saving || generating || !editable || !tags.length;
+    updateButton();
   };
   const renderTags = () => {
     tagsField.value = selectedTags.map((value) => findTag(tags, value)?.title || value).join(', ');
@@ -131,6 +141,57 @@ export default function renderMetadataTab(container, ctx) {
     event.preventDefault();
     if (tagSearch.value.trim() && !addTag(tagSearch.value)) {
       setStatus(`"${tagSearch.value.trim()}" is not in the tag taxonomy.`, true);
+    }
+  });
+  generateButton.addEventListener('click', async () => {
+    if (generateButton.disabled) return;
+    generating = true;
+    setControlsDisabled();
+    setStatus('Generating tags...');
+    try {
+      // Flush editor changes so generation uses the current page, not stale source.
+      const pending = await ctx.actions.saveDocument();
+      if (!pending?.ok) {
+        throw new Error(`Could not save pending page edits: ${pending?.error || 'unknown error'}. Tags were not generated.`);
+      }
+      if (disposed || !editable) return;
+      const source = await loadMetadataSource(ctx);
+      const generated = await loadGenTags(`/${ctx.org}/${ctx.repo}${ctx.path}`, ctx.token, source.html);
+      if (disposed || !editable) return;
+      if (!generated.length) {
+        setStatus('No tags were generated. Existing tags were kept.');
+        return;
+      }
+      const current = await loadMetadataSource(ctx);
+      if (disposed || !editable) return;
+      const pageTags = readMetadata(current.html).Tags;
+      const tagIdentity = (value) => findTag(tags, value)?.title || value;
+      const additions = generated.map(tagIdentity);
+      const merged = mergeTags(pageTags, [tagsField.value, ...additions].join(', '), tagIdentity);
+      if (merged === pageTags && !dirty.has('Tags')) {
+        selectedTags = merged ? merged.split(', ') : [];
+        renderTags();
+        setStatus('Generated tags are already on the page. No tags were added.');
+        return;
+      }
+      selectedTags = merged.split(', ');
+      dirty.add('Tags');
+      renderTags();
+      setStatus('Saving generated tags...');
+      const html = await saveMetadata(ctx, { Tags: merged }, snapshot, {
+        appendTags: true, tagIdentity,
+      });
+      if (disposed) return;
+      dirty.delete('Tags');
+      populate(html);
+      setStatus(dirty.size
+        ? 'Generated tags added to the page and saved. Other metadata changes are unsaved.'
+        : 'Generated tags added to the page and saved.');
+    } catch (error) {
+      if (!disposed) setStatus(error.message || 'Could not generate tags.', true);
+    } finally {
+      generating = false;
+      if (!disposed) setControlsDisabled();
     }
   });
   form.addEventListener('submit', async (event) => {

@@ -6,6 +6,17 @@ export function normalizeTags(value) {
   return [...new Set(value.split(/[,\r\n]+/).map((tag) => tag.trim()).filter(Boolean))].join(', ');
 }
 
+/** Append tags without duplicating existing values, preserving their spelling and order. */
+export function mergeTags(existing, additions, identify = (tag) => tag) {
+  const seen = new Set();
+  return normalizeTags(`${existing}, ${additions}`).split(', ').filter((tag) => {
+    const key = identify(tag).toLowerCase();
+    if (!tag || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).join(', ');
+}
+
 function metadataRows(doc) {
   return [...doc.querySelectorAll('main .metadata > div')];
 }
@@ -113,7 +124,9 @@ export function metadataTableHtml(html, changes) {
   return table.outerHTML;
 }
 
-export async function saveMetadata(ctx, changes, snapshot) {
+export async function saveMetadata(ctx, changes, snapshot, {
+  appendTags = false, tagIdentity,
+} = {}) {
   if (!snapshot || snapshot.editable === false) {
     throw new Error('The live page is not editable. Open Content mode and try again.');
   }
@@ -155,9 +168,13 @@ export async function saveMetadata(ctx, changes, snapshot) {
     throw new Error('Place the cursor on an empty line at the bottom of the page, without selecting content, then click Save metadata.');
   }
 
-  const updated = updateMetadata(source.html, changes);
+  // Merge against fresh source, not the sidebar's possibly stale initial tags.
+  const applied = appendTags
+    ? { ...changes, Tags: mergeTags(readMetadata(source.html).Tags, changes.Tags || '', tagIdentity) }
+    : changes;
+  const updated = updateMetadata(source.html, applied);
   const expected = readMetadata(updated);
-  const table = metadataTableHtml(source.html, changes);
+  const table = metadataTableHtml(source.html, applied);
   const result = await actions.sendHTML(table, existing ? { replace: true } : {});
   if (existing && !result?.ok) {
     throw new Error(result?.message || result?.error || 'DA rejected the metadata update.');

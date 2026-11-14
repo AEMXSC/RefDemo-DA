@@ -84,6 +84,41 @@ body {
   color: #555;
 }
 
+.dp-metadata .dp-metadata-tags-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dp-metadata .dp-metadata-tags-heading label {
+  margin: 0;
+}
+
+.dp-metadata .dp-metadata-generate {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border: 1px solid #1473e6;
+  border-radius: 16px;
+  background: #fff;
+  color: #1473e6;
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.dp-metadata .dp-metadata-generate:disabled {
+  border-color: #ccc;
+  color: #999;
+  cursor: default;
+}
+
+.dp-metadata .dp-metadata-generate:hover:not(:disabled) {
+  background: #eaf3fd;
+}
+
 .dp-metadata input,
 .dp-metadata textarea {
     background: #fff;
