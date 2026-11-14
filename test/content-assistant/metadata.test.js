@@ -1,5 +1,6 @@
 import {
-  metadataSourcePath, metadataTableHtml, normalizeTags, readMetadata, updateMetadata, saveMetadata,
+  metadataSourcePath, metadataTableHtml, mergeTags, normalizeTags,
+  readMetadata, updateMetadata, saveMetadata,
 } from '../../tools/content-assistant/lib/metadata.js';
 import renderMetadataTab from '../../tools/content-assistant/tabs/metadataTab.js';
 import { findTag, parseTags, starterTagsSheet } from '../../tools/content-assistant/lib/tags.js';
@@ -58,6 +59,10 @@ await test('Adds missing rows and preserves unrelated metadata', () => {
 await test('Tags accept commas and new lines and deduplicate', () => {
   assert(normalizeTags('sample,hello\nsample\r\n world,') === 'sample, hello, world', 'wrong tags');
 });
+await test('Appending tags deduplicates case-insensitively and preserves existing spelling', () => {
+  assert(mergeTags('USA, sample', 'usa, Sample, election, ELECTION') === 'USA, sample, election', 'wrong merged tags');
+  assert(mergeTags('', ' , \n') === '', 'empty tag retained');
+});
 await test('Clearing a field removes only its row', () => {
   const doc = parse(updateMetadata(existing, { Title: '', Tags: '' }));
   assert(doc.querySelectorAll('.metadata > div').length === 1, 'wrong remaining rows');
@@ -94,6 +99,10 @@ let listeners;
 let unsubscribed;
 let tagsSheet;
 let tagWrites;
+let generatedTags;
+let generationStatus;
+let generationRequests;
+let onGenerate;
 const taxonomy = () => ({
   ':type': 'sheet',
   data: [
@@ -170,8 +179,17 @@ function reset(html = empty) {
   unsubscribed = 0;
   tagsSheet = taxonomy();
   tagWrites = [];
+  generatedTags = ['USA', 'Election'];
+  generationStatus = 200;
+  generationRequests = [];
+  onGenerate = undefined;
 }
 window.fetch = async (url, options = {}) => {
+  if (String(url) === 'https://da-etc.adobeaem.workers.dev/tags') {
+    generationRequests.push(JSON.parse(options.body));
+    if (onGenerate) await onGenerate();
+    return new Response(JSON.stringify({ tags: generatedTags }), { status: generationStatus });
+  }
   if (String(url).endsWith('/test-org/test-site/config/tags.json')) {
     if (options.method === 'POST') {
       tagsSheet = JSON.parse(await options.body.get('data').text());
@@ -204,7 +222,160 @@ const submit = async () => {
     await tick();
   }
 };
+const generate = async () => {
+  fixture.querySelector('.dp-metadata-generate').click();
+  const deadline = Date.now() + 3000;
+  while (fixture.querySelector('.dp-metadata-generate').getAttribute('aria-busy') === 'true') {
+    if (Date.now() > deadline) throw new Error('Tag generation did not finish.');
+    // eslint-disable-next-line no-await-in-loop
+    await tick();
+  }
+};
 try {
+  await test('Generate Tags appends to existing page tags and saves immediately', async () => {
+    reset(existing);
+    selection = metadataTableHtml(existing, {});
+    generatedTags = ['sample', 'USA', 'usa', 'Election'];
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(readMetadata(saved).Tags === 'sample, hello, USA, Election', 'tags replaced or duplicated');
+    assert(readMetadata(saved).Title === 'Existing title', 'title changed');
+    assert(chips().join() === 'sample,hello,USA,Election', 'generated chips missing');
+    assert(generationRequests[0].html.includes('Original'), 'page HTML not sent');
+    assert(sends.length === 1 && sends[0].options.replace, 'not saved through editor');
+  });
+  await test('Generation inserts metadata on pages without existing tags', async () => {
+    reset();
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(readMetadata(saved).Tags === 'USA, Election', 'generated tags not persisted');
+    assert(sends.length === 1 && !sends[0].options.replace, 'not inserted');
+  });
+  await test('Generation deduplicates taxonomy paths, IDs and titles as the same tag', async () => {
+    reset(updateMetadata(existing, { Tags: 'topics/usa, sample' }));
+    selection = metadataTableHtml(live.html, {});
+    generatedTags = ['usa', 'USA', 'topics/usa', 'Election'];
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(readMetadata(saved).Tags === 'topics/usa, sample, Election', 'taxonomy alias duplicated');
+    assert(chips().join() === 'USA,sample,Election', 'taxonomy chips duplicated');
+  });
+  await test('Generation preserves unsaved title, description and selected tags', async () => {
+    reset(existing);
+    selection = metadataTableHtml(existing, {});
+    generatedTags = ['sample', 'New generated tag'];
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    input('Title', 'Draft title');
+    input('Description', 'Draft description');
+    pickTag('USA (topics/usa)');
+    await generate();
+    assert(readMetadata(saved).Tags === 'sample, hello, USA, New generated tag', 'selected tag lost');
+    assert(readMetadata(saved).Title === 'Existing title' && !readMetadata(saved).Description, 'drafts saved unexpectedly');
+    assert(fixture.querySelector('[name=Title]').value === 'Draft title', 'title draft lost');
+    assert(fixture.querySelector('[name=Description]').value === 'Draft description', 'description draft lost');
+    assert(!fixture.querySelector('button[type=submit]').disabled, 'draft save unavailable');
+  });
+  await test('Generation keeps tags added to the page while the request is in flight', async () => {
+    reset(existing);
+    selection = metadataTableHtml(existing, {});
+    onGenerate = () => {
+      live.html = updateMetadata(live.html, { Tags: 'sample, hello, Concurrent' });
+      saved = live.html;
+    };
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(readMetadata(saved).Tags === 'sample, hello, Concurrent, USA, Election', 'concurrent tag lost');
+  });
+  await test('Generation with only existing tags avoids unnecessary editor writes', async () => {
+    reset(existing);
+    generatedTags = ['SAMPLE', ' hello ', 'sample'];
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(sends.length === 0, 'unnecessary metadata replacement');
+    assert(readMetadata(saved).Tags === 'sample, hello', 'existing tags changed');
+  });
+  await test('Empty generation keeps existing tags and does not save metadata', async () => {
+    reset(existing);
+    generatedTags = [];
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(sends.length === 0 && readMetadata(saved).Tags === 'sample, hello', 'tags removed');
+  });
+  await test('Generation errors preserve tags and re-enable the button', async () => {
+    reset(existing);
+    generationStatus = 503;
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(fixture.querySelector('[role=status]').textContent.includes('HTTP 503'), 'service error hidden');
+    assert(chips().join() === 'sample,hello' && sends.length === 0, 'tags changed on failure');
+    assert(!fixture.querySelector('.dp-metadata-generate').disabled, 'retry unavailable');
+  });
+  await test('Invalid generation response is reported without changing tags', async () => {
+    reset(existing);
+    generatedTags = ['USA', null];
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(fixture.querySelector('[role=status]').textContent.includes('invalid tags'), 'bad response ignored');
+    assert(sends.length === 0 && chips().join() === 'sample,hello', 'bad response changed tags');
+  });
+  await test('Generation save failure retains generated tags for manual retry', async () => {
+    reset(existing);
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(sends.length === 0 && fixture.querySelector('[role=status]').classList.contains('dp-error'), 'unsafe save');
+    assert(chips().join() === 'sample,hello,USA,Election', 'generated draft lost');
+    selection = metadataTableHtml(existing, {});
+    await submit();
+    assert(readMetadata(saved).Tags === 'sample, hello, USA, Election', 'retry failed');
+  });
+  await test('Read-only pages disable generation', async () => {
+    reset(existing);
+    live.editable = false;
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(fixture.querySelector('.dp-metadata-generate').disabled, 'generation enabled');
+    assert(generationRequests.length === 0 && sends.length === 0, 'read-only generation ran');
+  });
+  await test('In-flight generation blocks duplicate requests and field edits', async () => {
+    reset();
+    onGenerate = () => {
+      const generateButton = fixture.querySelector('.dp-metadata-generate');
+      assert(generateButton.disabled && generateButton.getAttribute('aria-busy') === 'true', 'not busy');
+      assert(fixture.querySelector('[name=Title]').disabled, 'draft editable during generation');
+      generateButton.click();
+    };
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    await generate();
+    assert(generationRequests.length === 1, 'duplicate generation request');
+  });
+  await test('Leaving Metadata during generation cancels the page update', async () => {
+    reset();
+    onGenerate = () => fixture.metadataCleanup();
+    renderMetadataTab(fixture, ctx);
+    await waitReady();
+    fixture.querySelector('.dp-metadata-generate').click();
+    await tick();
+    await tick();
+    assert(sends.length === 0, 'disposed panel modified page');
+  });
+  await test('Append saves merge against fresh page metadata', async () => {
+    reset(existing);
+    selection = metadataTableHtml(existing, {});
+    await saveMetadata(ctx, { Tags: 'SAMPLE, New' }, live, { appendTags: true });
+    assert(readMetadata(saved).Tags === 'sample, hello, New', 'fresh tags replaced');
+  });
   await test('Insertion updates the live editor and persists via SDK save', async () => {
     reset();
     await saveMetadata(ctx, { Title: 'Live title' }, live);
