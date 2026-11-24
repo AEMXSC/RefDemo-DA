@@ -14,7 +14,9 @@ helix-importer-ui
 
 # AI tool / agent local config
 .cursor/
-.claude/
+.claude/*
+# Shared RefDemo replication skill is part of the repository
+!.claude/refdemo/
 .windsurf/
 .gemini/
 .codex/
